@@ -1,0 +1,245 @@
+<title>SmallWins Look Check</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone-sized Today screen on the left, what the phone shows outside the app on the right; stacks to one column when narrow. */
+:root {
+  --bg: #EEF0F8; --surface: #FFFFFF; --sunk: #E3E6F3; --ink: #1B1F3B; --muted: #5E6485; --line: #D5D9EC;
+  --ember: #EE6417; --ember-hi: #FFB627; --you: #0C8C99; --partner: #CF3F76; --gold: #C98A00;
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12142A; --surface: #1C1F3D; --sunk: #171A34; --ink: #F1F2FA; --muted: #A3A8C7; --line: #2F3460;
+  --ember: #FF7A2F; --ember-hi: #FFC14D; --you: #3CC6D1; --partner: #F0709F; --gold: #FFC14D; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12142A; --surface: #1C1F3D; --sunk: #171A34; --ink: #F1F2FA; --muted: #A3A8C7; --line: #2F3460;
+  --ember: #FF7A2F; --ember-hi: #FFC14D; --you: #3CC6D1; --partner: #F0709F; --gold: #FFC14D; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+.page { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 48px; display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.1; }
+h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 20px; font-weight: 700; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 60ch; margin-top: 8px; }
+.label { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.cols { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+button:focus-visible { outline: 3px solid var(--ember-hi); outline-offset: 2px; }
+
+/* Phone */
+.phone { background: var(--surface); border: 1px solid var(--line); border-radius: 30px; padding: 18px 16px 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.top { display: flex; align-items: center; gap: 12px; }
+.top .txt { flex: 1; min-width: 0; }
+.streak { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.streak small { font-family: var(--body); font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+.say { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.tokens { display: flex; gap: 5px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.tok { width: 12px; height: 12px; border-radius: 50%; background: var(--ember-hi); }
+.tok.used { background: var(--sunk); border: 1px solid var(--line); }
+
+/* Ember, the mascot */
+.emberwrap { width: 78px; height: 84px; flex: none; display: grid; place-items: center; }
+.ember { width: 100%; height: 100%; transition: transform .35s ease; transform-origin: 50% 90%; }
+.ember .outer { fill: var(--ember); } .ember .inner { fill: var(--ember-hi); }
+.ember .eye { fill: #1B1F3B; } .ember .mouth { fill: none; stroke: #1B1F3B; stroke-width: 3; stroke-linecap: round; display: none; }
+[data-mood="low"] .ember { transform: scale(.74); filter: saturate(.55); }
+[data-mood="ok"] .ember { transform: scale(.9); }
+[data-mood="blaze"] .ember { transform: scale(1.04); }
+[data-mood="low"] .m-low, [data-mood="ok"] .m-ok, [data-mood="blaze"] .m-blaze { display: block; }
+@media (prefers-reduced-motion: no-preference) { [data-mood="blaze"] .ember { animation: flick 1.6s ease-in-out infinite; } }
+@keyframes flick { 0%,100% { transform: scale(1.04) rotate(-1.5deg); } 50% { transform: scale(1.09) rotate(1.5deg); } }
+
+/* Rings */
+.rings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ring { background: var(--sunk); border-radius: 18px; padding: 12px; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ring svg { width: 56px; height: 56px; flex: none; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 7; }
+.ring .track { stroke: var(--line); }
+.ring .arc { stroke-linecap: round; stroke-dasharray: 163.4; transition: stroke-dashoffset .4s ease; }
+.ring.you .arc { stroke: var(--you); } .ring.partner .arc { stroke: var(--partner); }
+.ring b { font-family: var(--display); font-size: 18px; display: block; font-variant-numeric: tabular-nums; }
+.ring span { font-size: 12px; color: var(--muted); }
+.poke { margin-top: 4px; font-size: 12px; font-weight: 700; color: var(--partner); padding: 3px 0; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Habits */
+.habit { border: 1px solid var(--line); border-radius: 18px; padding: 12px 12px 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
+.habit h3 { font-size: 16px; font-weight: 700; }
+.habit .cue { font-size: 12px; color: var(--muted); }
+.segs { display: flex; gap: 3px; margin-top: 8px; grid-column: 1; }
+.seg { height: 8px; flex: 1; border-radius: 4px; background: var(--sunk); }
+.seg.on { background: var(--you); } .seg.min { box-shadow: 2px 0 0 var(--ink); }
+.habit.full .seg.on { background: var(--gold); }
+.plus { grid-row: 1 / span 2; grid-column: 2; width: 52px; height: 52px; border-radius: 16px; background: var(--you); color: var(--surface); font-family: var(--display); font-weight: 800; font-size: 20px; }
+.plus:active { transform: scale(.94); }
+.habit.full .plus { background: var(--sunk); color: var(--gold); }
+.state { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.habit.won .state { color: var(--you); } .habit.full .state { color: var(--gold); }
+
+/* Duel */
+.duel { background: var(--sunk); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.duelbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; }
+.duelbar i { display: block; height: 100%; } .duelbar .a { background: var(--you); } .duelbar .b { background: var(--partner); }
+.duelrow { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stake { font-size: 13px; color: var(--muted); }
+
+/* Notifications */
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.note .when { font-size: 11px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.note .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ember); }
+.note b { font-weight: 700; }
+.acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.acts button { font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 10px; background: var(--sunk); }
+.acts .primary { background: var(--ember); color: #fff; }
+
+/* Widget */
+.widget { background: var(--surface); border: 1px solid var(--line); border-radius: 26px; padding: 14px; display: flex; align-items: center; gap: 12px; max-width: 320px; }
+.widget .emberwrap { width: 48px; height: 52px; }
+.widget .ring { background: none; padding: 0; } .widget .ring svg { width: 46px; height: 46px; }
+.widget .n { font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1; }
+
+.ask { border-top: 1px solid var(--line); padding-top: 20px; }
+.ask ol { margin: 10px 0 0; padding-left: 20px; max-width: 62ch; display: flex; flex-direction: column; gap: 6px; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 14px; max-width: calc(100% - 32px); text-align: center; }
+</style>
+
+<div class="page" id="app" data-mood="ok">
+  <header>
+    <p class="label">Look check · example data</p>
+    <h1>SmallWins</h1>
+    <p class="lede">This is the proposed look, mascot and voice before any of it gets built into the app. It works: tap the + buttons or the notification's Done button and watch Ember and your ring react.</p>
+  </header>
+
+  <div class="cols">
+    <section class="phone" aria-label="Today screen">
+      <div class="top">
+        <div class="emberwrap">
+          <svg class="ember" viewBox="0 0 100 100" aria-label="Ember, the shared mascot">
+            <path class="outer" d="M50 6C60 28 86 40 86 64a36 34 0 0 1-72 0c0-18 13-26 19-40 5 9 11 8 17-18Z"/>
+            <path class="inner" d="M50 44c6 12 20 16 20 30a20 20 0 0 1-40 0c0-10 8-14 11-22 3 5 6 4 9-8Z"/>
+            <circle class="eye" cx="42" cy="70" r="3.4"/><circle class="eye" cx="58" cy="70" r="3.4"/>
+            <path class="mouth m-low" d="M44 83q6-5 12 0"/><path class="mouth m-ok" d="M45 81h10"/><path class="mouth m-blaze" d="M43 79q7 8 14 0"/>
+          </svg>
+        </div>
+        <div class="txt">
+          <div class="streak">12<small>days together</small></div>
+          <p class="say" id="say"></p>
+          <div class="tokens"><span class="tok"></span><span class="tok used"></span><span>1 rest token left this week</span></div>
+        </div>
+      </div>
+
+      <div class="rings">
+        <div class="ring you">
+          <svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="arc" id="arcYou" cx="32" cy="32" r="26"/></svg>
+          <div><b id="pctYou">0%</b><span>You</span></div>
+        </div>
+        <div class="ring partner">
+          <svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="arc" cx="32" cy="32" r="26" style="stroke-dashoffset:49"/></svg>
+          <div><b>70%</b><span>Partner</span><br><button class="poke" id="poke">Poke</button></div>
+        </div>
+      </div>
+
+      <div class="stack" id="habits"></div>
+
+      <div class="duel">
+        <span class="label">This week's duel · day 4 of 7</span>
+        <div class="duelbar"><i class="a" id="duelA"></i><i class="b" id="duelB"></i></div>
+        <div class="duelrow"><span id="duelYou"></span><span>Partner 318</span></div>
+        <p class="stake">Stake: loser cooks on Sunday.</p>
+      </div>
+    </section>
+
+    <div class="stack">
+      <h2>What your phone shows</h2>
+      <p class="label">Alarm, with one-tap logging</p>
+      <div class="note">
+        <div class="when"><span class="dot"></span>SmallWins · 1:30 pm · rings like an alarm</div>
+        <p><b>After lunch → water.</b> <span id="noteCount"></span></p>
+        <div class="acts"><button class="primary" id="noteDone">Done</button><button data-toast="Snoozed. Ember will ring again at 1:45.">Snooze 15</button><button data-toast="Skipped this one. The day is still winnable.">Skip</button></div>
+      </div>
+      <p class="label">If you ignore it once</p>
+      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 1:45 pm</div><p><b>Still here.</b> Still thirsty on your behalf. One tap and I leave you alone.</p></div>
+      <p class="label">Streak saver, 9 pm</p>
+      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 9:00 pm</div><p><b>Day 12 hangs on one glass.</b> I'm not angry. I'm just flickering.</p></div>
+      <p class="label">Partner events</p>
+      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 6:12 pm</div><p><b>Partner won their day.</b> The streak is waiting on you now. No pressure. Some pressure.</p></div>
+      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 4:40 pm</div><p><b>Partner poked you:</b> "Drink up, I'm winning this week."</p></div>
+      <p class="label">After a missed day</p>
+      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 8:05 am</div><p><b>You're back.</b> Yesterday used a rest token, so the streak is safe. First log today earns a comeback bonus.</p></div>
+
+      <p class="label">Home-screen widget</p>
+      <div class="widget">
+        <div class="emberwrap"><svg class="ember" viewBox="0 0 100 100" aria-hidden="true"><path class="outer" d="M50 6C60 28 86 40 86 64a36 34 0 0 1-72 0c0-18 13-26 19-40 5 9 11 8 17-18Z"/><path class="inner" d="M50 44c6 12 20 16 20 30a20 20 0 0 1-40 0c0-10 8-14 11-22 3 5 6 4 9-8Z"/><circle class="eye" cx="42" cy="70" r="3.4"/><circle class="eye" cx="58" cy="70" r="3.4"/><path class="mouth m-low" d="M44 83q6-5 12 0"/><path class="mouth m-ok" d="M45 81h10"/><path class="mouth m-blaze" d="M43 79q7 8 14 0"/></svg></div>
+        <div><div class="n">12</div><span class="label">days</span></div>
+        <div class="ring you"><svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="arc" id="arcYouW" cx="32" cy="32" r="26"/></svg></div>
+        <div class="ring partner"><svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="arc" cx="32" cy="32" r="26" style="stroke-dashoffset:49"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="ask">
+    <h2>Three things to tell me</h2>
+    <ol>
+      <li><b>Ember.</b> One shared flame you both keep alive: small and dull when the day is at risk, blazing when you have both won. Keep it, or do you want a different mascot?</li>
+      <li><b>The voice.</b> Are the notification lines the right amount of cheeky, or should they push harder or softer?</li>
+      <li><b>The Today screen.</b> Streak, two rings, habits with a big + button, duel at the bottom. Anything missing or in the wrong order?</li>
+    </ol>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  var habits = [
+    { name: 'Water', cue: 'After each meal and at 11, 4, 9', unit: 'glasses', done: 2, min: 4, target: 8 },
+    { name: 'Move', cue: 'After work · 4 days a week', unit: 'session', done: 0, min: 1, target: 1 },
+    { name: 'Read', cue: 'In bed, before the phone', unit: 'pages', done: 0, min: 2, target: 5 }
+  ];
+  var C = 163.4, app = document.getElementById('app'), list = document.getElementById('habits'), toastEl = document.getElementById('toast'), toastT;
+  var wasWon = false, wasGold = false;
+
+  function toast(msg) { toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { toastEl.hidden = true; }, 2600); }
+
+  function render() {
+    list.textContent = '';
+    var sum = 0, won = true, gold = true;
+    habits.forEach(function (h, i) {
+      sum += Math.min(h.done / h.target, 1);
+      if (h.done < h.min) won = false;
+      if (h.done < h.target) gold = false;
+      var card = document.createElement('div');
+      card.className = 'habit' + (h.done >= h.target ? ' full won' : h.done >= h.min ? ' won' : '');
+      var segs = '';
+      for (var s = 1; s <= h.target; s++) segs += '<span class="seg' + (s <= h.done ? ' on' : '') + (s === h.min && h.min < h.target ? ' min' : '') + '"></span>';
+      var state = h.done >= h.target ? 'Gold' : h.done >= h.min ? 'Counts for today' : (h.min - h.done) + ' more to count';
+      card.innerHTML = '<div><h3>' + h.name + ' <span class="state">' + h.done + '/' + h.target + ' ' + h.unit + ' · ' + state + '</span></h3><p class="cue">' + h.cue + '</p></div>' +
+        '<button class="plus" aria-label="Log ' + h.name + '">' + (h.done >= h.target ? '✓' : '+1') + '</button><div class="segs">' + segs + '</div>';
+      card.querySelector('.plus').addEventListener('click', function () { log(i); });
+      list.appendChild(card);
+    });
+    var pct = Math.round(sum / habits.length * 100), off = C * (1 - pct / 100);
+    document.getElementById('arcYou').style.strokeDashoffset = off;
+    document.getElementById('arcYouW').style.strokeDashoffset = off;
+    document.getElementById('pctYou').textContent = pct + '%';
+    var score = 270 + pct;
+    document.getElementById('duelYou').textContent = 'You ' + score;
+    document.getElementById('duelA').style.width = (score / (score + 318) * 100) + '%';
+    document.getElementById('duelB').style.width = (318 / (score + 318) * 100) + '%';
+    var w = habits[0];
+    document.getElementById('noteCount').textContent = w.done >= w.target ? 'All ' + w.target + ' done. Alarms are off for today.' : 'Glass ' + (w.done + 1) + ' of ' + w.target + '.';
+    app.dataset.mood = gold ? 'blaze' : won ? 'ok' : 'low';
+    document.getElementById('say').textContent = gold ? 'Gold day. I am enormous.' : won ? 'Day won. Partner is at 70%, so we wait.' : 'Feed me. A few taps and today counts.';
+    if (gold && !wasGold) toast('Gold day. Every target hit.');
+    else if (won && !wasWon) toast('Day won. Your half of the streak is safe.');
+    wasWon = won; wasGold = gold;
+  }
+  function log(i) { var h = habits[i]; if (h.done < h.target) { h.done++; render(); } }
+
+  document.getElementById('noteDone').addEventListener('click', function () { log(0); });
+  document.getElementById('poke').addEventListener('click', function () { toast('Poke sent: "Your half of the flame is looking small."'); });
+  document.querySelectorAll('[data-toast]').forEach(function (b) { b.addEventListener('click', function () { toast(b.dataset.toast); }); });
+  render();
+})();
+</script>
