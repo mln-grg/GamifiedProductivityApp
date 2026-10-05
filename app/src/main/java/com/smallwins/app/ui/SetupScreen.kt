@@ -132,7 +132,7 @@ fun SetupScreen(firstRun: Boolean, onChanged: () -> Unit, onTest: () -> Unit, on
         }
 
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.surface)
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.panel)
                 .border(1.dp, colors.line, RoundedCornerShape(18.dp)).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -143,7 +143,7 @@ fun SetupScreen(firstRun: Boolean, onChanged: () -> Unit, onTest: () -> Unit, on
         }
 
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.sunk).padding(14.dp),
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.panelHi).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text("Prove it works", style = MaterialTheme.typography.titleMedium)
@@ -163,7 +163,7 @@ fun SetupScreen(firstRun: Boolean, onChanged: () -> Unit, onTest: () -> Unit, on
 private fun Step(title: String, detail: String, done: Boolean, action: String, onAction: () -> Unit) {
     val colors = Sw.colors
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.surface)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.panel)
             .border(1.dp, colors.line, RoundedCornerShape(18.dp)).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -171,7 +171,7 @@ private fun Step(title: String, detail: String, done: Boolean, action: String, o
             Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             Text(
                 if (done) "Done" else "Needs you", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold,
-                color = if (done) colors.you else colors.ember,
+                color = if (done) colors.ok else colors.ember,
             )
         }
         Text(detail, style = MaterialTheme.typography.bodyMedium, color = colors.muted)

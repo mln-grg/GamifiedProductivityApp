@@ -1,10 +1,9 @@
 package com.smallwins.app.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -17,85 +16,69 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.smallwins.app.R
 
+/** One dark "system window" look: cold blue panels with Ember as the only warm thing on screen. */
 data class SwColors(
-    val bg: Color,
-    val surface: Color,
-    val sunk: Color,
-    val ink: Color,
-    val muted: Color,
-    val line: Color,
-    val ember: Color,
-    val emberHi: Color,
-    val you: Color,
-    val partner: Color,
-    val gold: Color,
+    val bg: Color = Color(0xFF070B14),
+    val panel: Color = Color(0xFF0D1524),
+    val panelHi: Color = Color(0xFF132038),
+    val line: Color = Color(0xFF1B2A47),
+    val edge: Color = Color(0xFF2E7BFF),
+    val glow: Color = Color(0xFF7CC4FF),
+    val ink: Color = Color(0xFFE6F0FF),
+    val muted: Color = Color(0xFF8A9BBD),
+    val ember: Color = Color(0xFFFF7A2F),
+    val gold: Color = Color(0xFFFFC14D),
+    val ok: Color = Color(0xFF4BE3A4),
+    val partner: Color = Color(0xFFF0709F),
 )
 
-private val Light = SwColors(
-    bg = Color(0xFFEEF0F8), surface = Color(0xFFFFFFFF), sunk = Color(0xFFE3E6F3), ink = Color(0xFF1B1F3B),
-    muted = Color(0xFF5E6485), line = Color(0xFFD5D9EC), ember = Color(0xFFEE6417), emberHi = Color(0xFFFFB627),
-    you = Color(0xFF0C8C99), partner = Color(0xFFCF3F76), gold = Color(0xFFC98A00),
-)
+val EmberFace = Color(0xFF10182B)
 
-private val Dark = SwColors(
-    bg = Color(0xFF12142A), surface = Color(0xFF1C1F3D), sunk = Color(0xFF171A34), ink = Color(0xFFF1F2FA),
-    muted = Color(0xFFA3A8C7), line = Color(0xFF2F3460), ember = Color(0xFFFF7A2F), emberHi = Color(0xFFFFC14D),
-    you = Color(0xFF3CC6D1), partner = Color(0xFFF0709F), gold = Color(0xFFFFC14D),
-)
-
-/** Ember's face stays dark ink in both themes so it reads on the flame. */
-val EmberFace = Color(0xFF1B1F3B)
-
-private val LocalSwColors = staticCompositionLocalOf { Light }
+private val LocalSwColors = staticCompositionLocalOf { SwColors() }
 
 object Sw {
     val colors: SwColors @Composable get() = LocalSwColors.current
 }
 
-private fun variable(res: Int, weight: Int) =
-    Font(res, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
-
-val DisplayFont = FontFamily(variable(R.font.bricolage_grotesque, 700), variable(R.font.bricolage_grotesque, 800))
-val BodyFont = FontFamily(
-    variable(R.font.figtree, 400), variable(R.font.figtree, 500), variable(R.font.figtree, 600), variable(R.font.figtree, 700),
+val DisplayFont = FontFamily(
+    Font(R.font.rajdhani_medium, FontWeight.Medium),
+    Font(R.font.rajdhani_semibold, FontWeight.SemiBold),
+    Font(R.font.rajdhani_bold, FontWeight.Bold),
 )
+
+private fun variable(weight: Int) =
+    Font(R.font.figtree, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+
+val BodyFont = FontFamily(variable(400), variable(500), variable(600), variable(700))
 
 private fun typography(): Typography {
     val d = Typography()
     fun TextStyle.body() = copy(fontFamily = BodyFont)
-    fun TextStyle.display(weight: Int = 700) = copy(fontFamily = DisplayFont, fontWeight = FontWeight(weight))
+    fun TextStyle.display(weight: FontWeight = FontWeight.Bold) = copy(fontFamily = DisplayFont, fontWeight = weight)
     return Typography(
-        displayLarge = d.displayLarge.display(800), displayMedium = d.displayMedium.display(800), displaySmall = d.displaySmall.display(800),
-        headlineLarge = d.headlineLarge.display(800), headlineMedium = d.headlineMedium.display(800), headlineSmall = d.headlineSmall.display(),
-        titleLarge = d.titleLarge.display(), titleMedium = d.titleMedium.display().copy(fontSize = 17.sp), titleSmall = d.titleSmall.body(),
+        displayLarge = d.displayLarge.display(), displayMedium = d.displayMedium.display(), displaySmall = d.displaySmall.display(),
+        headlineLarge = d.headlineLarge.display(), headlineMedium = d.headlineMedium.display(), headlineSmall = d.headlineSmall.display(),
+        titleLarge = d.titleLarge.display(), titleMedium = d.titleMedium.display(FontWeight.SemiBold).copy(fontSize = 20.sp),
+        titleSmall = d.titleSmall.body(),
         bodyLarge = d.bodyLarge.body(), bodyMedium = d.bodyMedium.body(), bodySmall = d.bodySmall.body(),
-        labelLarge = d.labelLarge.body().copy(fontWeight = FontWeight(700)), labelMedium = d.labelMedium.body(),
-        labelSmall = d.labelSmall.body().copy(fontWeight = FontWeight(700), letterSpacing = 1.sp),
+        labelLarge = d.labelLarge.display().copy(fontSize = 16.sp, letterSpacing = 1.5.sp), labelMedium = d.labelMedium.body(),
+        labelSmall = d.labelSmall.display().copy(fontSize = 13.sp, letterSpacing = 2.sp),
     )
 }
 
 @Composable
 fun SmallWinsTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
-    val c = if (dark) Dark else Light
-    val scheme = if (dark) {
-        darkColorScheme(
-            primary = c.ember, onPrimary = Color.White, secondary = c.you, onSecondary = c.bg,
-            secondaryContainer = c.line, onSecondaryContainer = c.ink,
-            background = c.bg, onBackground = c.ink, surface = c.surface, onSurface = c.ink,
-            surfaceVariant = c.sunk, onSurfaceVariant = c.muted, outline = c.line, outlineVariant = c.line,
-            surfaceContainer = c.surface, surfaceContainerHigh = c.surface, surfaceContainerHighest = c.sunk,
-        )
-    } else {
-        lightColorScheme(
-            primary = c.ember, onPrimary = Color.White, secondary = c.you, onSecondary = Color.White,
-            secondaryContainer = c.line, onSecondaryContainer = c.ink,
-            background = c.bg, onBackground = c.ink, surface = c.surface, onSurface = c.ink,
-            surfaceVariant = c.sunk, onSurfaceVariant = c.muted, outline = c.line, outlineVariant = c.line,
-            surfaceContainer = c.surface, surfaceContainerHigh = c.surface, surfaceContainerHighest = c.sunk,
-        )
-    }
-    CompositionLocalProvider(LocalSwColors provides c) {
+    val c = SwColors()
+    val scheme = darkColorScheme(
+        primary = c.edge, onPrimary = Color.White, secondary = c.glow, onSecondary = c.bg,
+        secondaryContainer = c.panelHi, onSecondaryContainer = c.ink,
+        background = c.bg, onBackground = c.ink, surface = c.panel, onSurface = c.ink,
+        surfaceVariant = c.panelHi, onSurfaceVariant = c.muted, outline = c.line, outlineVariant = c.line,
+        surfaceContainer = c.panel, surfaceContainerHigh = c.panelHi, surfaceContainerHighest = c.panelHi,
+        error = c.partner,
+    )
+    // No Surface wraps the screens, so the default text colour has to be set here.
+    CompositionLocalProvider(LocalSwColors provides c, LocalContentColor provides c.ink) {
         MaterialTheme(colorScheme = scheme, typography = typography(), content = content)
     }
 }

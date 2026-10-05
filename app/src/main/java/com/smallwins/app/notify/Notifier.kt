@@ -13,10 +13,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.smallwins.app.MainActivity
 import com.smallwins.app.R
-import com.smallwins.app.data.HabitItem
 import com.smallwins.app.data.Prefs
+import com.smallwins.app.data.QuestItem
 import com.smallwins.app.data.TodaySnapshot
-import com.smallwins.app.domain.ScheduleType
 
 class Notifier(private val context: Context, private val prefs: Prefs) {
     private val manager = NotificationManagerCompat.from(context)
@@ -26,14 +25,14 @@ class Notifier(private val context: Context, private val prefs: Prefs) {
     fun createChannels() {
         val system = context.getSystemService(NotificationManager::class.java)
         system.createNotificationChannel(
-            NotificationChannel(CH_REMINDERS, "Habit reminders", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Reminders at the times you set for each habit"
+            NotificationChannel(CH_REMINDERS, "Quest reminders", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Reminders at the times you set for each quest"
                 enableVibration(true)
             }
         )
         system.createNotificationChannel(
             NotificationChannel(CH_RINGING, "Ringing reminders", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Reminders that ring like an alarm until you respond"
+                description = "The morning call, and quests set to ring like an alarm"
                 enableVibration(true)
                 setSound(
                     RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
@@ -45,54 +44,60 @@ class Notifier(private val context: Context, private val prefs: Prefs) {
             }
         )
         system.createNotificationChannel(
-            NotificationChannel(CH_NUDGES, "Streak nudges", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "The evening streak saver and confirmations"
+            NotificationChannel(CH_NUDGES, "Progress and nudges", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "XP confirmations and the evening nudge"
             }
         )
     }
 
-    fun showReminder(item: HabitItem, rering: Boolean) {
-        val habit = item.habit
-        val title = if (habit.cue.isBlank()) habit.name else "${habit.cue} → ${habit.name}"
+    fun showReminder(item: QuestItem, rering: Boolean) {
+        val quest = item.quest
+        val title = if (quest.cue.isBlank()) quest.name else "${quest.cue} → ${quest.name}"
         val line = if (rering) pick("rering", Copy.rering) else pick("reminder", Copy.reminder)
-        val text = "${progressText(item, next = true)}. $line"
-        val builder = base(if (habit.ringing) CH_RINGING else CH_REMINDERS, title, text)
-            .setCategory(if (habit.ringing) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
+        val soFar = if (quest.target > 1) "${item.done} of ${quest.target} ${quest.unit} so far. " else ""
+        val builder = base(if (quest.ringing) CH_RINGING else CH_REMINDERS, title, soFar + line)
+            .setCategory(if (quest.ringing) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .addAction(0, "Done", action(ActionReceiver.ACTION_DONE, habit.id))
-            .addAction(0, "Snooze 15", action(ActionReceiver.ACTION_SNOOZE, habit.id))
-            .addAction(0, "Skip", action(ActionReceiver.ACTION_SKIP, habit.id))
-        val notification = builder.build()
-        // Insistent repeats the sound until the reminder is opened or answered.
-        if (habit.ringing) notification.flags = notification.flags or Notification.FLAG_INSISTENT
-        post(reminderId(habit.id), notification)
+            .addAction(0, "Done", action(ActionReceiver.ACTION_DONE, quest.id))
+            .addAction(0, "Snooze 15", action(ActionReceiver.ACTION_SNOOZE, quest.id))
+            .addAction(0, "Skip", action(ActionReceiver.ACTION_SKIP, quest.id))
+        post(reminderId(quest.id), builder.build().insistentIf(quest.ringing))
     }
 
-    fun showLogged(item: HabitItem, headline: String?) {
-        val title = headline ?: "Logged ${item.habit.name}"
-        post(ID_LOGGED, base(CH_NUDGES, title, progressText(item, next = false)).setTimeoutAfter(6_000).setSilent(true).build())
+    /** The wake-up call asking for today's quests. */
+    fun showMorning(canCarryOver: Boolean) {
+        val builder = base(CH_RINGING, "Today's quests are waiting", pick("morning", Copy.morning))
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .addAction(0, "Choose quests", openApp())
+        if (canCarryOver) builder.addAction(0, "Same as yesterday", action(ActionReceiver.ACTION_SAME, "plan"))
+        post(ID_MORNING, builder.build().insistentIf(true))
     }
+
+    fun showProgress(title: String, text: String) =
+        post(ID_PROGRESS, base(CH_NUDGES, title, text).setTimeoutAfter(8_000).setSilent(true).build())
 
     fun showSaver(snap: TodaySnapshot) {
-        val open = snap.items.filter { it.due && it.done < it.habit.minimum }
-        val what = open.joinToString(", ") { "${it.habit.minimum - it.done} ${it.habit.name.lowercase()}" }
-        val title = if (snap.streak > 0) "Day ${snap.streak + 1} hangs on this" else "Today is still winnable"
-        post(ID_SAVER, base(CH_NUDGES, title, "Left to count: $what. ${pick("saver", Copy.saver)}").build())
+        val open = snap.open
+        val title = "${open.size} ${if (open.size == 1) "quest" else "quests"} still open"
+        val names = open.joinToString(", ") { it.quest.name }
+        post(ID_SAVER, base(CH_NUDGES, title, "$names. Clear them and today's XP is yours. ${pick("saver", Copy.saver)}").build())
     }
 
     fun showTest() =
         post(ID_TEST, base(CH_REMINDERS, "Test reminder", "It worked. Reminders can reach you on this phone.").build())
 
-    fun cancelReminder(habitId: String) = manager.cancel(reminderId(habitId))
+    fun cancelReminder(questId: String) = manager.cancel(reminderId(questId))
+
+    fun cancelMorning() = manager.cancel(ID_MORNING)
+
+    fun cancelAll() = manager.cancelAll()
 
     fun pick(kind: String, lines: List<String>): String = lines[prefs.nextIndex(kind, lines.size)]
 
-    private fun progressText(item: HabitItem, next: Boolean): String {
-        val h = item.habit
-        return when (h.schedule) {
-            ScheduleType.WEEKLY -> "${item.weekDone} of ${item.weeklyTarget} days this week"
-            ScheduleType.DAILY -> "${item.done} of ${h.target} ${h.unit}" + if (next) " so far" else ""
-        }
+    // Insistent repeats the sound until the notification is opened or answered.
+    private fun Notification.insistentIf(ringing: Boolean) = apply {
+        if (ringing) flags = flags or Notification.FLAG_INSISTENT
     }
 
     private fun base(channel: String, title: String, text: String) = NotificationCompat.Builder(context, channel)
@@ -102,15 +107,16 @@ class Notifier(private val context: Context, private val prefs: Prefs) {
         .setContentText(text)
         .setStyle(NotificationCompat.BigTextStyle().bigText(text))
         .setAutoCancel(true)
-        .setContentIntent(
-            PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-        )
+        .setContentIntent(openApp())
 
-    private fun action(action: String, habitId: String): PendingIntent = PendingIntent.getBroadcast(
+    private fun openApp(): PendingIntent =
+        PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+
+    private fun action(action: String, questId: String): PendingIntent = PendingIntent.getBroadcast(
         context, 0,
         Intent(context, ActionReceiver::class.java).setAction(action)
-            .setData(Uri.parse("smallwins://action/$action/$habitId"))
-            .putExtra(ActionReceiver.EXTRA_HABIT_ID, habitId),
+            .setData(Uri.parse("smallwins://action/$action/$questId"))
+            .putExtra(ActionReceiver.EXTRA_QUEST_ID, questId),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
@@ -119,14 +125,15 @@ class Notifier(private val context: Context, private val prefs: Prefs) {
         if (enabled()) manager.notify(id, notification)
     }
 
-    private fun reminderId(habitId: String) = habitId.hashCode()
+    private fun reminderId(questId: String) = questId.hashCode()
 
     companion object {
         const val CH_REMINDERS = "reminders"
         const val CH_RINGING = "ringing"
         const val CH_NUDGES = "nudges"
         private const val ID_SAVER = 1
-        private const val ID_LOGGED = 2
+        private const val ID_PROGRESS = 2
         private const val ID_TEST = 3
+        private const val ID_MORNING = 4
     }
 }

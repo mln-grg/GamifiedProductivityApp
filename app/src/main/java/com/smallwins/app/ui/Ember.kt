@@ -49,7 +49,7 @@ fun Ember(mood: Mood, modifier: Modifier = Modifier) {
     )
     val dull = mood == Mood.LOW
     val outerColor = if (dull) lerp(colors.ember, colors.muted, 0.4f) else colors.ember
-    val innerColor = if (dull) lerp(colors.emberHi, colors.muted, 0.3f) else colors.emberHi
+    val innerColor = if (dull) lerp(colors.gold, colors.muted, 0.3f) else colors.gold
 
     Canvas(modifier) {
         val unit = size.minDimension / 100f
@@ -82,7 +82,7 @@ private class Spark(val x: Float, val delay: Float, val speed: Float, val size: 
 @Composable
 fun Sparks(key: Any, modifier: Modifier = Modifier) {
     val colors = Sw.colors
-    val palette = listOf(colors.ember, colors.emberHi, colors.you, colors.partner)
+    val palette = listOf(colors.ember, colors.gold, colors.glow, colors.partner)
     val sparks = remember(key) {
         List(48) { Spark(Random.nextFloat(), Random.nextFloat() * 0.3f, 0.7f + Random.nextFloat() * 0.6f, 6f + Random.nextFloat() * 8f, Random.nextFloat() - 0.5f, it % palette.size) }
     }

@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "f1dd21d3bb2a2ad2a09d810d9d4d6a39",
+    "identityHash": "d3b57306240cadb9919845e7fa45148b",
     "entities": [
       {
-        "tableName": "habits",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `cue` TEXT NOT NULL, `unit` TEXT NOT NULL, `schedule` TEXT NOT NULL, `target` INTEGER NOT NULL, `minimum` INTEGER NOT NULL, `weeklyDays` INTEGER NOT NULL, `reminderTimes` TEXT NOT NULL, `ringing` INTEGER NOT NULL, `startDate` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, `archived` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "tableName": "quests",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `cue` TEXT NOT NULL, `unit` TEXT NOT NULL, `target` INTEGER NOT NULL, `xp` INTEGER NOT NULL, `reminderTimes` TEXT NOT NULL, `ringing` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, `archived` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -33,26 +33,14 @@
             "notNull": true
           },
           {
-            "fieldPath": "schedule",
-            "columnName": "schedule",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
             "fieldPath": "target",
             "columnName": "target",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "minimum",
-            "columnName": "minimum",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "weeklyDays",
-            "columnName": "weeklyDays",
+            "fieldPath": "xp",
+            "columnName": "xp",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -66,12 +54,6 @@
             "fieldPath": "ringing",
             "columnName": "ringing",
             "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "startDate",
-            "columnName": "startDate",
-            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -96,7 +78,7 @@
       },
       {
         "tableName": "logs",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `habitId` TEXT NOT NULL, `date` TEXT NOT NULL, `loggedAt` INTEGER NOT NULL, `source` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `questId` TEXT NOT NULL, `date` TEXT NOT NULL, `loggedAt` INTEGER NOT NULL, `source` TEXT NOT NULL, `xp` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -105,8 +87,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "habitId",
-            "columnName": "habitId",
+            "fieldPath": "questId",
+            "columnName": "questId",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -127,6 +109,12 @@
             "columnName": "source",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "xp",
+            "columnName": "xp",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -146,19 +134,80 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_logs_date` ON `${TABLE_NAME}` (`date`)"
           },
           {
-            "name": "index_logs_habitId",
+            "name": "index_logs_questId",
             "unique": false,
             "columnNames": [
-              "habitId"
+              "questId"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_logs_habitId` ON `${TABLE_NAME}` (`habitId`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_logs_questId` ON `${TABLE_NAME}` (`questId`)"
           }
         ]
       },
       {
+        "tableName": "plans",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `questIds` TEXT NOT NULL, `confirmed` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+        "fields": [
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "questIds",
+            "columnName": "questIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confirmed",
+            "columnName": "confirmed",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "date"
+          ]
+        }
+      },
+      {
+        "tableName": "xp_events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `kind` TEXT NOT NULL, `xp` INTEGER NOT NULL, PRIMARY KEY(`date`, `kind`))",
+        "fields": [
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "xp",
+            "columnName": "xp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "date",
+            "kind"
+          ]
+        }
+      },
+      {
         "tableName": "day_records",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `status` TEXT NOT NULL, `score` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `status` TEXT NOT NULL, `cleared` INTEGER NOT NULL, `total` INTEGER NOT NULL, PRIMARY KEY(`date`))",
         "fields": [
           {
             "fieldPath": "date",
@@ -173,8 +222,14 @@
             "notNull": true
           },
           {
-            "fieldPath": "score",
-            "columnName": "score",
+            "fieldPath": "cleared",
+            "columnName": "cleared",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "total",
+            "columnName": "total",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -188,7 +243,7 @@
       },
       {
         "tableName": "alarm_events",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `habitId` TEXT NOT NULL, `slot` INTEGER NOT NULL, `scheduledAt` INTEGER NOT NULL, `firedAt` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `questId` TEXT NOT NULL, `slot` INTEGER NOT NULL, `scheduledAt` INTEGER NOT NULL, `firedAt` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -197,8 +252,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "habitId",
-            "columnName": "habitId",
+            "fieldPath": "questId",
+            "columnName": "questId",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -241,7 +296,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f1dd21d3bb2a2ad2a09d810d9d4d6a39')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd3b57306240cadb9919845e7fa45148b')"
     ]
   }
 }

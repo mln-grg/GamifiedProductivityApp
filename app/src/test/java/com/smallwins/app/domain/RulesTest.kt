@@ -11,47 +11,57 @@ import java.time.LocalDate
 class RulesTest {
     // 2026-10-05 is a Monday.
     private val mon = LocalDate.of(2026, 10, 5)
-    private val longAgo = LocalDate.of(2026, 1, 1)
 
-    private fun daily(target: Int, min: Int) = HabitRule("d", ScheduleType.DAILY, target, min, 0, longAgo)
-    private fun weekly(days: Int, start: LocalDate = longAgo) = HabitRule("w", ScheduleType.WEEKLY, 1, 1, days, start)
-    private fun rec(dayOffset: Long, status: DayStatus, score: Int = 100) = DayRecord(mon.plusDays(dayOffset), status, score)
+    private fun rec(dayOffset: Long, status: DayStatus) = DayRecord(mon.plusDays(dayOffset), status)
+    private fun day(vararg quests: Pair<Int, Int>) = Rules.evaluate(quests.map { QuestProgress(target = it.first, done = it.second) })
 
-    @Test fun `minimum wins the day, target makes it gold`() {
-        val water = daily(target = 8, min = 4)
-        val below = Rules.evaluateDay(mon, listOf(HabitProgress(water, 3)))
-        val atMin = Rules.evaluateDay(mon, listOf(HabitProgress(water, 4)))
-        val full = Rules.evaluateDay(mon, listOf(HabitProgress(water, 9)))
-        assertFalse(below.won)
-        assertTrue(atMin.won); assertFalse(atMin.gold); assertEquals(50, atMin.score)
-        assertTrue(full.gold); assertEquals(100, full.score)
+    @Test fun `clearing half the quests wins the day, clearing all is gold`() {
+        assertFalse(day(8 to 7, 1 to 0, 1 to 0).won)
+        assertTrue(day(8 to 8, 1 to 1, 1 to 0).won)
+        assertFalse(day(8 to 8, 1 to 1, 1 to 0).gold)
+        assertTrue(day(8 to 8, 1 to 1).gold)
+        assertTrue(day(1 to 1, 1 to 0).won)   // 1 of 2
+        assertFalse(day(1 to 1, 1 to 0, 1 to 0, 1 to 0).won)   // 1 of 4
     }
 
-    @Test fun `weekly habit is not due until it cannot be put off`() {
-        val gym = weekly(4)
-        assertFalse(Rules.isDue(HabitProgress(gym, 0, 0), mon))               // 7 days left, 4 needed
-        assertFalse(Rules.isDue(HabitProgress(gym, 0, 0), mon.plusDays(2)))   // Wed: 5 left
-        assertTrue(Rules.isDue(HabitProgress(gym, 0, 0), mon.plusDays(3)))    // Thu: 4 left, 4 needed
-        assertFalse(Rules.isDue(HabitProgress(gym, 0, 2), mon.plusDays(3)))   // 2 already done
-        assertFalse(Rules.isDue(HabitProgress(gym, 0, 4), mon.plusDays(6)))   // week complete
+    @Test fun `a day with no quests is never won`() {
+        assertFalse(day().won); assertFalse(day().gold)
     }
 
-    @Test fun `weekly habit started mid-week gets earlier days free`() {
-        val sat = mon.plusDays(5)
-        val gym = weekly(4, start = sat)
-        assertEquals(0, Rules.weeklyTarget(gym, sat))
-        assertFalse(Rules.isDue(HabitProgress(gym, 0, 0), sat))
-        assertEquals(4, Rules.weeklyTarget(gym, mon.plusDays(7)))
+    @Test fun `streak bonus is 2 percent a day capped at 50`() {
+        assertEquals(0, Rules.streakBonusPercent(0))
+        assertEquals(24, Rules.streakBonusPercent(12))
+        assertEquals(50, Rules.streakBonusPercent(25))
+        assertEquals(50, Rules.streakBonusPercent(400))
+        assertEquals(60, Rules.scaled(40, 25))
     }
 
-    @Test fun `day with nothing due is a free win but not gold`() {
-        val eval = Rules.evaluateDay(mon, listOf(HabitProgress(weekly(4), 0, 0)))
-        assertTrue(eval.won); assertFalse(eval.gold); assertEquals(0, eval.dueCount)
+    @Test fun `every tick pays and ticks add up to the quest's scaled xp`() {
+        for (streak in listOf(0, 3, 12, 40)) {
+            for (target in listOf(1, 3, 7, 8, 30)) {
+                val ticks = (1..target).map { Rules.unitXp(40, target, it, streak) }
+                assertEquals(Rules.scaled(40, streak), ticks.sum())
+                assertTrue(ticks.all { it >= 0 })
+            }
+        }
+        assertEquals(listOf(5, 5, 5, 5, 5, 5, 5, 5), (1..8).map { Rules.unitXp(40, 8, it, 0) })
+    }
+
+    @Test fun `levels need 100 xp then 50 more each`() {
+        assertEquals(LevelState(1, 0, 100), Rules.level(0))
+        assertEquals(LevelState(1, 99, 100), Rules.level(99))
+        assertEquals(LevelState(2, 0, 150), Rules.level(100))
+        assertEquals(LevelState(4, 10, 250), Rules.level(460))
+    }
+
+    @Test fun `ranks step up at fixed levels`() {
+        assertEquals("E", Rules.rank(6)); assertEquals("D", Rules.rank(7)); assertEquals("C", Rules.rank(12))
+        assertEquals("B", Rules.rank(22)); assertEquals("A", Rules.rank(35)); assertEquals("S", Rules.rank(50))
     }
 
     @Test fun `streak counts wins and rest days do not break it`() {
         val s = Rules.streak(listOf(rec(0, DayStatus.WON), rec(1, DayStatus.GOLD), rec(2, DayStatus.RESTED), rec(3, DayStatus.WON)))
-        assertEquals(3, s.current); assertEquals(3, s.lifetimeWins); assertNull(s.earnBack)
+        assertEquals(3, s.current); assertNull(s.earnBack)
     }
 
     @Test fun `missed day resets streak and opens an earn-back window`() {
@@ -61,7 +71,7 @@ class RulesTest {
         assertEquals(mon.plusDays(5), s.earnBack!!.deadline)
     }
 
-    @Test fun `two gold days inside the window restore the lost streak`() {
+    @Test fun `two full clears inside the window restore the lost streak`() {
         val s = Rules.streak(listOf(
             rec(0, DayStatus.WON), rec(1, DayStatus.WON), rec(2, DayStatus.MISSED),
             rec(3, DayStatus.GOLD), rec(4, DayStatus.WON), rec(5, DayStatus.GOLD),
@@ -78,7 +88,7 @@ class RulesTest {
     }
 
     @Test fun `lost day spends a rest token only while a streak exists and tokens remain`() {
-        val lost = DayEval(score = 20, won = false, gold = false, dueCount = 1)
+        val lost = DayEval(cleared = 0, total = 3)
         assertEquals(DayStatus.MISSED, Rules.finalizeStatus(lost, mon, emptyList()))
         val one = listOf(rec(0, DayStatus.WON))
         assertEquals(DayStatus.RESTED, Rules.finalizeStatus(lost, mon.plusDays(1), one))
@@ -97,10 +107,5 @@ class RulesTest {
         assertFalse(Rules.isComeback(listOf(rec(0, DayStatus.MISSED))))
         assertTrue(Rules.isComeback(listOf(rec(0, DayStatus.WON), rec(1, DayStatus.RESTED))))
         assertFalse(Rules.isComeback(listOf(rec(0, DayStatus.RESTED), rec(1, DayStatus.WON))))
-    }
-
-    @Test fun `week score sums this week's finished days plus today`() {
-        val records = listOf(rec(-1, DayStatus.WON, 90), rec(0, DayStatus.WON, 80), rec(1, DayStatus.GOLD, 100))
-        assertEquals(230, Rules.weekScore(mon.plusDays(2), records, todayScore = 50))
     }
 }

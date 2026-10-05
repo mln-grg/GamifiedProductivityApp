@@ -14,6 +14,11 @@ class Prefs(context: Context) {
         get() = sp.getLong("missedAckAt", 0L)
         set(value) = sp.edit().putLong("missedAckAt", value).apply()
 
+    /** HH:mm of the morning call that asks for today's quests. */
+    var morningTime: String
+        get() = sp.getString("morningTime", "07:30") ?: "07:30"
+        set(value) = sp.edit().putString("morningTime", value).apply()
+
     /** Keys of the alarms currently registered with Android, so stale ones can be cancelled. */
     var alarmKeys: Set<String>
         get() = sp.getStringSet("alarmKeys", emptySet()) ?: emptySet()

@@ -2,101 +2,82 @@ package com.smallwins.app.domain
 
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
-
-enum class ScheduleType { DAILY, WEEKLY }
 
 enum class DayStatus { WON, GOLD, RESTED, MISSED }
 
-/**
- * The parts of a habit the rules need.
- * DAILY: [target] and [minimum] are counts per day.
- * WEEKLY: done on [weeklyDays] days out of 7; one log on a day counts as that day's session.
- */
-data class HabitRule(
-    val id: String,
-    val schedule: ScheduleType,
-    val target: Int,
-    val minimum: Int,
-    val weeklyDays: Int,
-    val startDate: LocalDate,
-)
+data class QuestProgress(val target: Int, val done: Int) {
+    val cleared get() = done >= target
+}
 
-data class HabitProgress(
-    val rule: HabitRule,
-    val doneToday: Int,
-    /** Days earlier in this Monday-to-Sunday week on which the habit was logged. */
-    val doneDaysEarlierThisWeek: Int = 0,
-)
+/** How a day's quests went. Clearing at least half keeps the streak; clearing all is a full clear. */
+data class DayEval(val cleared: Int, val total: Int) {
+    val won get() = total > 0 && cleared >= (total + 1) / 2
+    val gold get() = total > 0 && cleared == total
+}
 
-data class DayEval(val score: Int, val won: Boolean, val gold: Boolean, val dueCount: Int)
-
-data class DayRecord(val date: LocalDate, val status: DayStatus, val score: Int)
+data class DayRecord(val date: LocalDate, val status: DayStatus)
 
 data class EarnBack(val lostStreak: Int, val goldDays: Int, val deadline: LocalDate)
 
-data class StreakState(
-    val current: Int,
-    val best: Int,
-    val lifetimeWins: Int,
-    val earnBack: EarnBack?,
-)
+data class StreakState(val current: Int, val best: Int, val earnBack: EarnBack?)
+
+data class LevelState(val level: Int, val xpInto: Int, val xpNeeded: Int) {
+    val rank get() = Rules.rank(level)
+}
 
 object Rules {
+    const val MIN_QUESTS = 2
     const val REST_TOKENS_PER_WEEK = 2
     const val EARN_BACK_GOLD_DAYS = 2
     const val EARN_BACK_WINDOW_DAYS = 3L
-    const val COMEBACK_BONUS = 15
-    val MILESTONES = listOf(3, 7, 14, 30, 50, 100, 200, 365)
+    const val CLEAR_BONUS_XP = 40
+    const val COMEBACK_XP = 20
+    private const val STREAK_BONUS_PER_DAY = 2
+    private const val MAX_STREAK_BONUS = 50
 
     fun weekStart(date: LocalDate): LocalDate =
         date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
-    /** A habit started mid-week gets the days before it existed as free off-days. */
-    fun weeklyTarget(rule: HabitRule, date: LocalDate): Int {
-        val start = weekStart(date)
-        if (!rule.startDate.isAfter(start)) return rule.weeklyDays
-        val daysBeforeStart = ChronoUnit.DAYS.between(start, rule.startDate).toInt()
-        return max(0, rule.weeklyDays - daysBeforeStart)
-    }
+    fun evaluate(quests: List<QuestProgress>) = DayEval(quests.count { it.cleared }, quests.size)
+
+    /** Extra XP in percent for a streak of finished days: 2% a day, capped at 50%. */
+    fun streakBonusPercent(streak: Int): Int = min(MAX_STREAK_BONUS, STREAK_BONUS_PER_DAY * max(0, streak))
+
+    fun scaled(baseXp: Int, streak: Int): Int = baseXp * (100 + streakBonusPercent(streak)) / 100
 
     /**
-     * Daily habits are due every day. A weekly habit only becomes due once it can no
-     * longer be put off: the sessions still needed equal the days left in the week.
+     * XP for the [unit]-th tick (1-based) of a quest done [target] times a day.
+     * Every tick pays, and the ticks always add up to exactly the quest's scaled XP.
      */
-    fun isDue(progress: HabitProgress, date: LocalDate): Boolean {
-        val rule = progress.rule
-        if (date.isBefore(rule.startDate)) return false
-        return when (rule.schedule) {
-            ScheduleType.DAILY -> true
-            ScheduleType.WEEKLY -> {
-                val daysLeft = 8 - date.dayOfWeek.value
-                val needed = weeklyTarget(rule, date) - progress.doneDaysEarlierThisWeek
-                needed > 0 && needed >= daysLeft
-            }
+    fun unitXp(baseXp: Int, target: Int, unit: Int, streak: Int): Int {
+        val total = scaled(baseXp, streak)
+        val t = max(1, target)
+        return total * unit / t - total * (unit - 1) / t
+    }
+
+    /** Levels get slower: 100 XP for the first (a full first day reaches level 2), 50 more for each one after. */
+    fun xpNeeded(level: Int): Int = 100 + 50 * (level - 1)
+
+    fun level(totalXp: Int): LevelState {
+        var level = 1
+        var left = max(0, totalXp)
+        while (left >= xpNeeded(level)) {
+            left -= xpNeeded(level)
+            level++
         }
+        return LevelState(level, left, xpNeeded(level))
     }
 
-    fun fraction(progress: HabitProgress): Float {
-        val target = max(1, progress.rule.target)
-        return min(1f, progress.doneToday.toFloat() / target)
-    }
-
-    /** A day with nothing due is a free win: it keeps the streak but is never gold. */
-    fun evaluateDay(date: LocalDate, habits: List<HabitProgress>): DayEval {
-        val due = habits.filter { isDue(it, date) }
-        if (due.isEmpty()) return DayEval(score = 100, won = true, gold = false, dueCount = 0)
-        val score = (due.map { fraction(it) }.average() * 100).roundToInt()
-        return DayEval(
-            score = score,
-            won = due.all { it.doneToday >= it.rule.minimum },
-            gold = due.all { it.doneToday >= it.rule.target },
-            dueCount = due.size,
-        )
+    fun rank(level: Int): String = when {
+        level >= 50 -> "S"
+        level >= 35 -> "A"
+        level >= 22 -> "B"
+        level >= 12 -> "C"
+        level >= 7 -> "D"
+        else -> "E"
     }
 
     fun restTokensLeft(date: LocalDate, records: List<DayRecord>): Int {
@@ -120,14 +101,12 @@ object Rules {
     fun streak(records: List<DayRecord>): StreakState {
         var current = 0
         var best = 0
-        var wins = 0
         var earnBack: EarnBack? = null
         for (r in records) {
             if (earnBack != null && r.date.isAfter(earnBack.deadline)) earnBack = null
             when (r.status) {
                 DayStatus.WON, DayStatus.GOLD -> {
                     current++
-                    wins++
                     val eb = earnBack
                     if (r.status == DayStatus.GOLD && eb != null) {
                         val gold = eb.goldDays + 1
@@ -149,7 +128,7 @@ object Rules {
             }
             best = max(best, current)
         }
-        return StreakState(current, best, wins, earnBack)
+        return StreakState(current, best, earnBack)
     }
 
     /** True when the last finished day was not won and there is history to come back to. */
@@ -158,11 +137,4 @@ object Rules {
         val lostLast = last.status == DayStatus.RESTED || last.status == DayStatus.MISSED
         return lostLast && records.any { it.status == DayStatus.WON || it.status == DayStatus.GOLD }
     }
-
-    fun weekScore(date: LocalDate, records: List<DayRecord>, todayScore: Int): Int {
-        val start = weekStart(date)
-        return records.filter { weekStart(it.date) == start && it.date.isBefore(date) }.sumOf { it.score } + todayScore
-    }
-
-    fun milestoneReached(streak: Int): Boolean = streak in MILESTONES
 }

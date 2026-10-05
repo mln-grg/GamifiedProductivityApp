@@ -25,6 +25,7 @@ class SmallWinsApp : Application() {
         super.onCreate()
         notifier.createChannels()
         scope.launch {
+            repo.seedStarterQuests()
             repo.rollover()
             scheduler.rescheduleAll()
         }

@@ -1,244 +1,228 @@
 <title>SmallWins Look Check</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one phone-sized Today screen on the left, what the phone shows outside the app on the right; stacks to one column when narrow. */
+/* Layout: one phone running the daily loop (pick quests, then clear them) on the left; what arrives outside the app and the rules on the right. Single dark "system window" look by choice. */
 :root {
-  --bg: #EEF0F8; --surface: #FFFFFF; --sunk: #E3E6F3; --ink: #1B1F3B; --muted: #5E6485; --line: #D5D9EC;
-  --ember: #EE6417; --ember-hi: #FFB627; --you: #0C8C99; --partner: #CF3F76; --gold: #C98A00;
-  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  color-scheme: dark;
+  --void: #070B14; --panel: #0D1524; --panel-hi: #132038; --edge: #2E7BFF; --glow: #7CC4FF; --text: #E6F0FF; --dim: #8A9BBD;
+  --ember: #FF7A2F; --gold: #FFC14D; --ok: #4BE3A4; --partner: #F0709F;
+  --display: "Rajdhani", "Arial Narrow", system-ui, sans-serif;
   --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #12142A; --surface: #1C1F3D; --sunk: #171A34; --ink: #F1F2FA; --muted: #A3A8C7; --line: #2F3460;
-  --ember: #FF7A2F; --ember-hi: #FFC14D; --you: #3CC6D1; --partner: #F0709F; --gold: #FFC14D; color-scheme: dark } }
-:root[data-theme="dark"] {
-  --bg: #12142A; --surface: #1C1F3D; --sunk: #171A34; --ink: #F1F2FA; --muted: #A3A8C7; --line: #2F3460;
-  --ember: #FF7A2F; --ember-hi: #FFC14D; --you: #3CC6D1; --partner: #F0709F; --gold: #FFC14D; color-scheme: dark }
-
-body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
-.page { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 48px; display: flex; flex-direction: column; gap: 28px; }
-h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.1; }
-h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
-h2 { font-size: 20px; font-weight: 700; }
+body { background: var(--void); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+.page { max-width: 1000px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.05; letter-spacing: 0.02em; }
+h1 { font-size: 38px; font-weight: 700; text-transform: uppercase; }
+h2 { font-size: 22px; font-weight: 700; text-transform: uppercase; color: var(--glow); }
 p { margin: 0; }
-.lede { color: var(--muted); max-width: 60ch; margin-top: 8px; }
-.label { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-.cols { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 28px; align-items: start; }
-@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
-.stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
-button:focus-visible { outline: 3px solid var(--ember-hi); outline-offset: 2px; }
+.lede { color: var(--dim); max-width: 62ch; margin-top: 8px; }
+.label { font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.cols { display: grid; grid-template-columns: minmax(0, 390px) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 780px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-/* Phone */
-.phone { background: var(--surface); border: 1px solid var(--line); border-radius: 30px; padding: 18px 16px 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.top { display: flex; align-items: center; gap: 12px; }
-.top .txt { flex: 1; min-width: 0; }
-.streak { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
-.streak small { font-family: var(--body); font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 4px; }
-.say { font-size: 13px; color: var(--muted); margin-top: 4px; }
-.tokens { display: flex; gap: 5px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
-.tok { width: 12px; height: 12px; border-radius: 50%; background: var(--ember-hi); }
-.tok.used { background: var(--sunk); border: 1px solid var(--line); }
+/* System window */
+.win { background: linear-gradient(180deg, var(--panel-hi), var(--panel)); border: 1px solid var(--edge); box-shadow: 0 0 18px rgba(46,123,255,.28), inset 0 0 22px rgba(46,123,255,.10); padding: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+.win > header { display: flex; align-items: center; gap: 10px; }
+.win > header::before, .win > header::after { content: ""; height: 1px; background: var(--edge); flex: 1; }
+.win > header span { font-family: var(--display); font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; font-size: 15px; color: var(--glow); }
+.phone { background: var(--void); border: 1px solid #1B2740; border-radius: 30px; padding: 16px 14px 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 
-/* Ember, the mascot */
-.emberwrap { width: 78px; height: 84px; flex: none; display: grid; place-items: center; }
-.ember { width: 100%; height: 100%; transition: transform .35s ease; transform-origin: 50% 90%; }
-.ember .outer { fill: var(--ember); } .ember .inner { fill: var(--ember-hi); }
-.ember .eye { fill: #1B1F3B; } .ember .mouth { fill: none; stroke: #1B1F3B; stroke-width: 3; stroke-linecap: round; display: none; }
-[data-mood="low"] .ember { transform: scale(.74); filter: saturate(.55); }
-[data-mood="ok"] .ember { transform: scale(.9); }
-[data-mood="blaze"] .ember { transform: scale(1.04); }
-[data-mood="low"] .m-low, [data-mood="ok"] .m-ok, [data-mood="blaze"] .m-blaze { display: block; }
-@media (prefers-reduced-motion: no-preference) { [data-mood="blaze"] .ember { animation: flick 1.6s ease-in-out infinite; } }
-@keyframes flick { 0%,100% { transform: scale(1.04) rotate(-1.5deg); } 50% { transform: scale(1.09) rotate(1.5deg); } }
+/* Player bar */
+.player { display: flex; align-items: center; gap: 12px; }
+.ember { width: 58px; height: 62px; flex: none; }
+.ember .outer { fill: var(--ember); } .ember .inner { fill: var(--gold); } .ember .face { fill: #10182B; }
+.lv { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; }
+.lv small { font-size: 14px; letter-spacing: 0.14em; color: var(--dim); margin-right: 6px; }
+.rank { font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: 0.12em; border: 1px solid var(--gold); color: var(--gold); padding: 1px 8px; margin-left: 8px; vertical-align: 5px; }
+.xpbar { height: 8px; background: #16223A; margin-top: 8px; position: relative; overflow: hidden; }
+.xpbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--edge), var(--glow)); box-shadow: 0 0 10px var(--glow); transition: width .35s ease; }
+.xptxt { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-top: 4px; font-variant-numeric: tabular-nums; }
 
-/* Rings */
-.rings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.ring { background: var(--sunk); border-radius: 18px; padding: 12px; display: flex; align-items: center; gap: 10px; min-width: 0; }
-.ring svg { width: 56px; height: 56px; flex: none; transform: rotate(-90deg); }
-.ring circle { fill: none; stroke-width: 7; }
-.ring .track { stroke: var(--line); }
-.ring .arc { stroke-linecap: round; stroke-dasharray: 163.4; transition: stroke-dashoffset .4s ease; }
-.ring.you .arc { stroke: var(--you); } .ring.partner .arc { stroke: var(--partner); }
-.ring b { font-family: var(--display); font-size: 18px; display: block; font-variant-numeric: tabular-nums; }
-.ring span { font-size: 12px; color: var(--muted); }
-.poke { margin-top: 4px; font-size: 12px; font-weight: 700; color: var(--partner); padding: 3px 0; text-decoration: underline; text-underline-offset: 3px; }
+/* Quests */
+.quest { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 10px 0; border-top: 1px solid #1B2A47; }
+.quest:first-of-type { border-top: 0; }
+.quest h3 { font-size: 19px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.quest .meta { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.quest .go { grid-row: 1 / span 2; grid-column: 2; width: 50px; height: 46px; border: 1px solid var(--edge); background: rgba(46,123,255,.14); font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--glow); }
+.quest .go:active { transform: scale(.95); }
+.quest.done h3 { color: var(--ok); } .quest.done .go { border-color: var(--ok); color: var(--ok); background: rgba(75,227,164,.10); }
+.pick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid #1B2A47; width: 100%; text-align: left; }
+.pick:first-of-type { border-top: 0; }
+.box { width: 22px; height: 22px; border: 1px solid var(--edge); display: grid; place-items: center; font-weight: 700; color: var(--void); }
+.pick.on .box { background: var(--glow); }
+.pick b { font-family: var(--display); font-size: 19px; font-weight: 600; display: block; }
+.pick span { font-size: 12px; color: var(--dim); }
+.pick .xp { font-family: var(--display); font-weight: 700; color: var(--gold); }
+.cta { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: 0.12em; text-transform: uppercase; padding: 12px; background: var(--edge); color: #fff; width: 100%; }
+.cta[disabled] { background: #1B2A47; color: var(--dim); cursor: default; }
+.ghost { font-family: var(--display); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--glow); padding: 8px 0; text-align: left; }
+.form { display: flex; flex-direction: column; gap: 8px; border: 1px dashed #2A3D63; padding: 10px; }
+.form label { font-size: 12px; color: var(--dim); display: flex; flex-direction: column; gap: 4px; }
+.form input { background: #0A1220; border: 1px solid #2A3D63; padding: 8px 10px; min-width: 0; width: 100%; box-sizing: border-box; }
+.row { display: flex; gap: 8px; } .row > * { flex: 1; min-width: 0; }
+.note-line { font-size: 13px; color: var(--dim); }
+.duo { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #2A3D63; padding: 9px 12px; font-size: 13px; }
+.duo b { color: var(--partner); } .duo button { color: var(--partner); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 
-/* Habits */
-.habit { border: 1px solid var(--line); border-radius: 18px; padding: 12px 12px 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
-.habit h3 { font-size: 16px; font-weight: 700; }
-.habit .cue { font-size: 12px; color: var(--muted); }
-.segs { display: flex; gap: 3px; margin-top: 8px; grid-column: 1; }
-.seg { height: 8px; flex: 1; border-radius: 4px; background: var(--sunk); }
-.seg.on { background: var(--you); } .seg.min { box-shadow: 2px 0 0 var(--ink); }
-.habit.full .seg.on { background: var(--gold); }
-.plus { grid-row: 1 / span 2; grid-column: 2; width: 52px; height: 52px; border-radius: 16px; background: var(--you); color: var(--surface); font-family: var(--display); font-weight: 800; font-size: 20px; }
-.plus:active { transform: scale(.94); }
-.habit.full .plus { background: var(--sunk); color: var(--gold); }
-.state { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-.habit.won .state { color: var(--you); } .habit.full .state { color: var(--gold); }
-
-/* Duel */
-.duel { background: var(--sunk); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
-.duelbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; }
-.duelbar i { display: block; height: 100%; } .duelbar .a { background: var(--you); } .duelbar .b { background: var(--partner); }
-.duelrow { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.stake { font-size: 13px; color: var(--muted); }
-
-/* Notifications */
-.note { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
-.note .when { font-size: 11px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
-.note .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ember); }
-.note b { font-weight: 700; }
+/* Notifications + rules */
+.note { background: var(--panel); border: 1px solid #1B2A47; border-radius: 14px; padding: 11px 13px; display: flex; flex-direction: column; gap: 3px; }
+.note .when { font-size: 11px; color: var(--dim); }
 .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-.acts button { font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 10px; background: var(--sunk); }
-.acts .primary { background: var(--ember); color: #fff; }
+.acts button { font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 9px; background: #16223A; }
+.acts .primary { background: var(--edge); color: #fff; }
+.rules { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 60ch; }
+.rules b { color: var(--glow); }
 
-/* Widget */
-.widget { background: var(--surface); border: 1px solid var(--line); border-radius: 26px; padding: 14px; display: flex; align-items: center; gap: 12px; max-width: 320px; }
-.widget .emberwrap { width: 48px; height: 52px; }
-.widget .ring { background: none; padding: 0; } .widget .ring svg { width: 46px; height: 46px; }
-.widget .n { font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1; }
-
-.ask { border-top: 1px solid var(--line); padding-top: 20px; }
-.ask ol { margin: 10px 0 0; padding-left: 20px; max-width: 62ch; display: flex; flex-direction: column; gap: 6px; }
-.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 14px; max-width: calc(100% - 32px); text-align: center; }
+.levelup { position: fixed; inset: 0; background: rgba(4,7,14,.82); display: grid; place-items: center; padding: 16px; z-index: 5; }
+.levelup .win { max-width: 320px; width: 100%; text-align: center; align-items: center; }
+.levelup .big { font-family: var(--display); font-weight: 700; font-size: 54px; line-height: 1; color: var(--glow); text-shadow: 0 0 18px var(--edge); }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--panel-hi); border: 1px solid var(--edge); color: var(--text); font-weight: 600; font-size: 14px; padding: 10px 16px; max-width: calc(100% - 32px); text-align: center; z-index: 6; }
+@media (prefers-reduced-motion: no-preference) { .levelup .win { animation: pop .35s ease-out; } @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } } }
 </style>
 
-<div class="page" id="app" data-mood="ok">
+<div class="page">
   <header>
-    <p class="label">Look check · example data</p>
+    <p class="label">Look check, version 2 · example data</p>
     <h1>SmallWins</h1>
-    <p class="lede">This is the proposed look, mascot and voice before any of it gets built into the app. It works: tap the + buttons or the notification's Done button and watch Ember and your ring react.</p>
+    <p class="lede">The new loop: each morning you choose today's quests, clear them through the day for XP, and level up by doing it consistently. Try it: toggle quests, add your own, accept, then clear them.</p>
   </header>
 
   <div class="cols">
-    <section class="phone" aria-label="Today screen">
-      <div class="top">
-        <div class="emberwrap">
-          <svg class="ember" viewBox="0 0 100 100" aria-label="Ember, the shared mascot">
-            <path class="outer" d="M50 6C60 28 86 40 86 64a36 34 0 0 1-72 0c0-18 13-26 19-40 5 9 11 8 17-18Z"/>
-            <path class="inner" d="M50 44c6 12 20 16 20 30a20 20 0 0 1-40 0c0-10 8-14 11-22 3 5 6 4 9-8Z"/>
-            <circle class="eye" cx="42" cy="70" r="3.4"/><circle class="eye" cx="58" cy="70" r="3.4"/>
-            <path class="mouth m-low" d="M44 83q6-5 12 0"/><path class="mouth m-ok" d="M45 81h10"/><path class="mouth m-blaze" d="M43 79q7 8 14 0"/>
-          </svg>
-        </div>
-        <div class="txt">
-          <div class="streak">12<small>days together</small></div>
-          <p class="say" id="say"></p>
-          <div class="tokens"><span class="tok"></span><span class="tok used"></span><span>1 rest token left this week</span></div>
+    <section class="phone" aria-label="App screen">
+      <div class="player">
+        <svg class="ember" viewBox="0 0 100 100" aria-label="Ember"><path class="outer" d="M50 6C60 28 86 40 86 64a36 34 0 0 1-72 0c0-18 13-26 19-40 5 9 11 8 17-18Z"/><path class="inner" d="M50 44c6 12 20 16 20 30a20 20 0 0 1-40 0c0-10 8-14 11-22 3 5 6 4 9-8Z"/><circle class="face" cx="42" cy="70" r="3.4"/><circle class="face" cx="58" cy="70" r="3.4"/></svg>
+        <div style="flex:1;min-width:0">
+          <div class="lv"><small>LEVEL</small><span id="lv">6</span><span class="rank" id="rank">RANK E</span></div>
+          <div class="xpbar"><i id="xpfill"></i></div>
+          <div class="xptxt"><span id="xptxt"></span><span>12-day streak · +20% XP</span></div>
         </div>
       </div>
-
-      <div class="rings">
-        <div class="ring you">
-          <svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="arc" id="arcYou" cx="32" cy="32" r="26"/></svg>
-          <div><b id="pctYou">0%</b><span>You</span></div>
-        </div>
-        <div class="ring partner">
-          <svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="arc" cx="32" cy="32" r="26" style="stroke-dashoffset:49"/></svg>
-          <div><b>70%</b><span>Partner</span><br><button class="poke" id="poke">Poke</button></div>
-        </div>
-      </div>
-
-      <div class="stack" id="habits"></div>
-
-      <div class="duel">
-        <span class="label">This week's duel · day 4 of 7</span>
-        <div class="duelbar"><i class="a" id="duelA"></i><i class="b" id="duelB"></i></div>
-        <div class="duelrow"><span id="duelYou"></span><span>Partner 318</span></div>
-        <p class="stake">Stake: loser cooks on Sunday.</p>
-      </div>
+      <div id="screen" class="stack"></div>
+      <div class="duo"><span><b>Partner</b> · Lv 5 · 3 of 4 cleared · 9 days together</span><button id="poke">Poke</button></div>
     </section>
 
     <div class="stack">
       <h2>What your phone shows</h2>
-      <p class="label">Alarm, with one-tap logging</p>
-      <div class="note">
-        <div class="when"><span class="dot"></span>SmallWins · 1:30 pm · rings like an alarm</div>
-        <p><b>After lunch → water.</b> <span id="noteCount"></span></p>
-        <div class="acts"><button class="primary" id="noteDone">Done</button><button data-toast="Snoozed. Ember will ring again at 1:45.">Snooze 15</button><button data-toast="Skipped this one. The day is still winnable.">Skip</button></div>
-      </div>
-      <p class="label">If you ignore it once</p>
-      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 1:45 pm</div><p><b>Still here.</b> Still thirsty on your behalf. One tap and I leave you alone.</p></div>
-      <p class="label">Streak saver, 9 pm</p>
-      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 9:00 pm</div><p><b>Day 12 hangs on one glass.</b> I'm not angry. I'm just flickering.</p></div>
-      <p class="label">Partner events</p>
-      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 6:12 pm</div><p><b>Partner won their day.</b> The streak is waiting on you now. No pressure. Some pressure.</p></div>
-      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 4:40 pm</div><p><b>Partner poked you:</b> "Drink up, I'm winning this week."</p></div>
-      <p class="label">After a missed day</p>
-      <div class="note"><div class="when"><span class="dot"></span>SmallWins · 8:05 am</div><p><b>You're back.</b> Yesterday used a rest token, so the streak is safe. First log today earns a comeback bonus.</p></div>
+      <div class="note"><div class="when">SmallWins · 7:30 am · rings like an alarm</div><p><b>Today's quests are waiting.</b> Choose them before I choose for you.</p><div class="acts"><button class="primary" id="nPick">Choose quests</button><button data-toast="Same quests as yesterday accepted. Reminders are set.">Same as yesterday</button></div></div>
+      <div class="note"><div class="when">SmallWins · 1:30 pm</div><p><b>After lunch → Water.</b> <span id="nWater"></span> One tap and I leave you alone.</p><div class="acts"><button class="primary" id="nDone">Done</button><button data-toast="Snoozed for 15 minutes.">Snooze 15</button><button data-toast="Skipped this one.">Skip</button></div></div>
+      <div class="note"><div class="when">SmallWins · 9:00 pm</div><p><b>2 quests still open.</b> Clear them and today's XP is yours. I'm not angry. I'm just flickering.</p></div>
 
-      <p class="label">Home-screen widget</p>
-      <div class="widget">
-        <div class="emberwrap"><svg class="ember" viewBox="0 0 100 100" aria-hidden="true"><path class="outer" d="M50 6C60 28 86 40 86 64a36 34 0 0 1-72 0c0-18 13-26 19-40 5 9 11 8 17-18Z"/><path class="inner" d="M50 44c6 12 20 16 20 30a20 20 0 0 1-40 0c0-10 8-14 11-22 3 5 6 4 9-8Z"/><circle class="eye" cx="42" cy="70" r="3.4"/><circle class="eye" cx="58" cy="70" r="3.4"/><path class="mouth m-low" d="M44 83q6-5 12 0"/><path class="mouth m-ok" d="M45 81h10"/><path class="mouth m-blaze" d="M43 79q7 8 14 0"/></svg></div>
-        <div><div class="n">12</div><span class="label">days</span></div>
-        <div class="ring you"><svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="arc" id="arcYouW" cx="32" cy="32" r="26"/></svg></div>
-        <div class="ring partner"><svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="arc" cx="32" cy="32" r="26" style="stroke-dashoffset:49"/></svg></div>
-      </div>
+      <h2 style="margin-top:10px">How levelling works</h2>
+      <ol class="rules">
+        <li><b>Your quest list is yours.</b> Water, reading, walking, cooking, anything. Each has its own reminder times, saved once.</li>
+        <li><b>Each morning you pick.</b> If you ignore the morning call, yesterday's picks carry over so the day is never empty.</li>
+        <li><b>Every tick pays XP.</b> Partial progress pays too (each glass of water counts). Clearing every quest adds a bonus.</li>
+        <li><b>Consistency multiplies XP.</b> Each streak day adds 2%, up to +50%. A missed day never takes XP away; it only resets the multiplier unless a rest token covers it.</li>
+        <li><b>Levels get slower, ranks mark the big steps.</b> E, D, C, B, A, S.</li>
+        <li><b>Your partner is a side layer.</b> You see each other's level and progress, can poke, and share a couple streak. Nothing of yours depends on it.</li>
+      </ol>
+
+      <h2 style="margin-top:10px">Tell me</h2>
+      <ol class="rules">
+        <li>Is this the right feel, or do you want it closer to a game (stats like Strength and Mind, titles, penalties)?</li>
+        <li>Should a day need a minimum number of quests (I suggest 2), so picking one easy quest can't farm levels?</li>
+        <li>Keep Ember as your avatar, or drop the mascot for a pure system look?</li>
+      </ol>
     </div>
   </div>
-
-  <section class="ask">
-    <h2>Three things to tell me</h2>
-    <ol>
-      <li><b>Ember.</b> One shared flame you both keep alive: small and dull when the day is at risk, blazing when you have both won. Keep it, or do you want a different mascot?</li>
-      <li><b>The voice.</b> Are the notification lines the right amount of cheeky, or should they push harder or softer?</li>
-      <li><b>The Today screen.</b> Streak, two rings, habits with a big + button, duel at the bottom. Anything missing or in the wrong order?</li>
-    </ol>
-  </section>
 </div>
+<div class="levelup" id="levelup" hidden><div class="win"><header><span>System</span></header><p class="label">Level up</p><div class="big" id="luNum"></div><p id="luText" style="color:var(--dim)"></p><button class="cta" id="luOk">Continue</button></div></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
 (function () {
-  var habits = [
-    { name: 'Water', cue: 'After each meal and at 11, 4, 9', unit: 'glasses', done: 2, min: 4, target: 8 },
-    { name: 'Move', cue: 'After work · 4 days a week', unit: 'session', done: 0, min: 1, target: 1 },
-    { name: 'Read', cue: 'In bed, before the phone', unit: 'pages', done: 0, min: 2, target: 5 }
+  var tasks = [
+    { name: 'Water', cue: 'After each meal', target: 8, unit: 'glasses', xp: 40, times: '9:00, 11:00, 1:30, 4:00, 6:30, 9:00', on: true, done: 0 },
+    { name: 'Read', cue: 'In bed, before the phone', target: 1, unit: '10 pages', xp: 40, times: '10:00 pm', on: true, done: 0 },
+    { name: 'Walk', cue: 'After work', target: 1, unit: '20 minutes', xp: 40, times: '6:00 pm', on: true, done: 0 },
+    { name: 'Exercise', cue: 'Before breakfast', target: 1, unit: 'session', xp: 60, times: '7:45 am', on: false, done: 0 },
+    { name: 'Cook dinner', cue: 'When you get home', target: 1, unit: 'meal', xp: 40, times: '7:00 pm', on: false, done: 0 }
   ];
-  var C = 163.4, app = document.getElementById('app'), list = document.getElementById('habits'), toastEl = document.getElementById('toast'), toastT;
-  var wasWon = false, wasGold = false;
+  var MULT = 1.2, MIN_QUESTS = 2;
+  var st = { view: 'pick', level: 6, xp: 430, need: 500, adding: false, bonusPaid: false };
+  var screen = document.getElementById('screen'), toastEl = document.getElementById('toast'), toastT;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function toast(m) { toastEl.textContent = m; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { toastEl.hidden = true; }, 2600); }
+  function rank(l) { return l >= 50 ? 'S' : l >= 35 ? 'A' : l >= 22 ? 'B' : l >= 12 ? 'C' : l >= 7 ? 'D' : 'E'; }
 
-  function toast(msg) { toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { toastEl.hidden = true; }, 2600); }
-
-  function render() {
-    list.textContent = '';
-    var sum = 0, won = true, gold = true;
-    habits.forEach(function (h, i) {
-      sum += Math.min(h.done / h.target, 1);
-      if (h.done < h.min) won = false;
-      if (h.done < h.target) gold = false;
-      var card = document.createElement('div');
-      card.className = 'habit' + (h.done >= h.target ? ' full won' : h.done >= h.min ? ' won' : '');
-      var segs = '';
-      for (var s = 1; s <= h.target; s++) segs += '<span class="seg' + (s <= h.done ? ' on' : '') + (s === h.min && h.min < h.target ? ' min' : '') + '"></span>';
-      var state = h.done >= h.target ? 'Gold' : h.done >= h.min ? 'Counts for today' : (h.min - h.done) + ' more to count';
-      card.innerHTML = '<div><h3>' + h.name + ' <span class="state">' + h.done + '/' + h.target + ' ' + h.unit + ' · ' + state + '</span></h3><p class="cue">' + h.cue + '</p></div>' +
-        '<button class="plus" aria-label="Log ' + h.name + '">' + (h.done >= h.target ? '✓' : '+1') + '</button><div class="segs">' + segs + '</div>';
-      card.querySelector('.plus').addEventListener('click', function () { log(i); });
-      list.appendChild(card);
-    });
-    var pct = Math.round(sum / habits.length * 100), off = C * (1 - pct / 100);
-    document.getElementById('arcYou').style.strokeDashoffset = off;
-    document.getElementById('arcYouW').style.strokeDashoffset = off;
-    document.getElementById('pctYou').textContent = pct + '%';
-    var score = 270 + pct;
-    document.getElementById('duelYou').textContent = 'You ' + score;
-    document.getElementById('duelA').style.width = (score / (score + 318) * 100) + '%';
-    document.getElementById('duelB').style.width = (318 / (score + 318) * 100) + '%';
-    var w = habits[0];
-    document.getElementById('noteCount').textContent = w.done >= w.target ? 'All ' + w.target + ' done. Alarms are off for today.' : 'Glass ' + (w.done + 1) + ' of ' + w.target + '.';
-    app.dataset.mood = gold ? 'blaze' : won ? 'ok' : 'low';
-    document.getElementById('say').textContent = gold ? 'Gold day. I am enormous.' : won ? 'Day won. Partner is at 70%, so we wait.' : 'Feed me. A few taps and today counts.';
-    if (gold && !wasGold) toast('Gold day. Every target hit.');
-    else if (won && !wasWon) toast('Day won. Your half of the streak is safe.');
-    wasWon = won; wasGold = gold;
+  function gain(amount) {
+    st.xp += Math.round(amount * MULT);
+    if (st.xp >= st.need) {
+      st.xp -= st.need; st.level++; st.need += 100;
+      $('luNum').textContent = st.level;
+      $('luText').textContent = 'Rank ' + rank(st.level) + '. ' + (rank(st.level) !== rank(st.level - 1) ? 'New rank reached.' : 'Ember grows.');
+      $('levelup').hidden = false;
+    }
   }
-  function log(i) { var h = habits[i]; if (h.done < h.target) { h.done++; render(); } }
+  function head() {
+    $('lv').textContent = st.level; $('rank').textContent = 'RANK ' + rank(st.level);
+    $('xpfill').style.width = Math.min(100, st.xp / st.need * 100) + '%';
+    $('xptxt').textContent = st.xp + ' / ' + st.need + ' XP';
+    var w = tasks[0];
+    $('nWater').textContent = st.view === 'today' && w.on ? w.done + ' of ' + w.target + ' glasses so far.' : 'Accept today\'s quests first.';
+  }
 
-  document.getElementById('noteDone').addEventListener('click', function () { log(0); });
-  document.getElementById('poke').addEventListener('click', function () { toast('Poke sent: "Your half of the flame is looking small."'); });
+  function renderPick() {
+    var n = tasks.filter(function (t) { return t.on; }).length;
+    var h = '<div class="win"><header><span>Choose today\'s quests</span></header>';
+    tasks.forEach(function (t, i) {
+      h += '<button class="pick' + (t.on ? ' on' : '') + '" data-i="' + i + '" aria-pressed="' + t.on + '"><span class="box">' + (t.on ? '✓' : '') + '</span><span><b>' + esc(t.name) + '</b><span>' + (t.target > 1 ? t.target + ' ' + esc(t.unit) : esc(t.unit)) + ' · reminders ' + esc(t.times) + '</span></span><span class="xp">+' + t.xp + ' XP</span></button>';
+    });
+    if (st.adding) {
+      h += '<div class="form"><label>Quest name<input id="fName" placeholder="Stretch"></label><div class="row"><label>How many times a day<input id="fTarget" type="number" min="1" max="30" value="1"></label><label>Remind me at<input id="fTime" type="time" value="08:00"></label></div><label>When? Tie it to something you already do<input id="fCue" placeholder="After coffee"></label><div class="row"><button class="cta" id="fSave">Add quest</button><button class="ghost" id="fCancel">Cancel</button></div></div>';
+    } else {
+      h += '<button class="ghost" id="addBtn">+ New quest</button>';
+    }
+    h += '<p class="note-line">' + (n < MIN_QUESTS ? 'Pick at least ' + MIN_QUESTS + ' quests to start the day.' : n + ' quests picked. Their reminders get set when you accept.') + '</p>';
+    h += '<button class="cta" id="accept"' + (n < MIN_QUESTS ? ' disabled' : '') + '>Accept ' + n + (n === 1 ? ' quest' : ' quests') + '</button></div>';
+    screen.innerHTML = h;
+    screen.querySelectorAll('.pick').forEach(function (b) { b.addEventListener('click', function () { var t = tasks[+b.dataset.i]; t.on = !t.on; render(); }); });
+    if (st.adding) {
+      $('fSave').addEventListener('click', function () {
+        var name = $('fName').value.trim(); if (!name) { toast('Give the quest a name first.'); return; }
+        var target = Math.max(1, Math.min(30, parseInt($('fTarget').value, 10) || 1));
+        tasks.push({ name: name, cue: $('fCue').value.trim(), target: target, unit: target > 1 ? 'times' : 'once', xp: 40, times: $('fTime').value || '8:00', on: true, done: 0 });
+        st.adding = false; render(); toast('"' + name + '" added to your quest list.');
+      });
+      $('fCancel').addEventListener('click', function () { st.adding = false; render(); });
+    } else { $('addBtn').addEventListener('click', function () { st.adding = true; render(); }); }
+    $('accept').addEventListener('click', function () { st.view = 'today'; st.bonusPaid = false; tasks.forEach(function (t) { t.done = 0; }); render(); toast('Quests accepted. Reminders are set.'); });
+  }
+
+  function renderToday() {
+    var active = tasks.filter(function (t) { return t.on; }), cleared = active.filter(function (t) { return t.done >= t.target; }).length;
+    var h = '<div class="win"><header><span>Daily quest</span></header>';
+    active.forEach(function (t) {
+      var done = t.done >= t.target, i = tasks.indexOf(t);
+      h += '<div class="quest' + (done ? ' done' : '') + '"><h3>' + esc(t.name) + '</h3><button class="go" data-i="' + i + '" aria-label="Log ' + esc(t.name) + '"' + (done ? ' disabled' : '') + '>' + (done ? '✓' : t.target > 1 ? '+1' : 'Done') + '</button><span class="meta">' + (t.target > 1 ? '[' + t.done + '/' + t.target + '] ' + esc(t.unit) : esc(t.unit)) + (t.cue ? ' · ' + esc(t.cue) : '') + ' · +' + t.xp + ' XP</span></div>';
+    });
+    h += '<p class="note-line">' + (cleared === active.length ? 'All quests cleared. Bonus paid.' : cleared + ' of ' + active.length + ' cleared. Clear them all for a +40 XP bonus.') + '</p>';
+    h += '<button class="ghost" id="repick">Change today\'s quests</button></div>';
+    screen.innerHTML = h;
+    screen.querySelectorAll('.go').forEach(function (b) { b.addEventListener('click', function () { log(+b.dataset.i); }); });
+    $('repick').addEventListener('click', function () { st.view = 'pick'; render(); });
+  }
+
+  function log(i) {
+    var t = tasks[i]; if (!t.on || t.done >= t.target) return;
+    t.done++; gain(t.xp / t.target);
+    var active = tasks.filter(function (x) { return x.on; });
+    if (!st.bonusPaid && active.every(function (x) { return x.done >= x.target; })) { st.bonusPaid = true; gain(40); toast('All quests cleared. +' + Math.round(40 * MULT) + ' bonus XP.'); }
+    else if (t.done >= t.target) toast(t.name + ' cleared. +' + Math.round(t.xp * MULT) + ' XP with your streak bonus.');
+    render();
+  }
+  function render() { if (st.view === 'pick') renderPick(); else renderToday(); head(); }
+
+  $('luOk').addEventListener('click', function () { $('levelup').hidden = true; });
+  $('poke').addEventListener('click', function () { toast('Poke sent: "One quest left. I can see it from here."'); });
+  $('nPick').addEventListener('click', function () { st.view = 'pick'; render(); screen.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+  $('nDone').addEventListener('click', function () { if (st.view !== 'today' || !tasks[0].on) { toast('Accept today\'s quests first.'); return; } log(0); });
   document.querySelectorAll('[data-toast]').forEach(function (b) { b.addEventListener('click', function () { toast(b.dataset.toast); }); });
   render();
 })();

@@ -3,150 +3,193 @@ package com.smallwins.app.data
 import com.smallwins.app.domain.DayEval
 import com.smallwins.app.domain.DayRecord
 import com.smallwins.app.domain.EarnBack
-import com.smallwins.app.domain.HabitProgress
+import com.smallwins.app.domain.LevelState
+import com.smallwins.app.domain.QuestProgress
 import com.smallwins.app.domain.Rules
-import com.smallwins.app.domain.ScheduleType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
+import java.util.UUID
 
-data class HabitItem(
-    val habit: HabitEntity,
-    val progress: HabitProgress,
-    val due: Boolean,
-    val weeklyTarget: Int,
-) {
-    val done get() = progress.doneToday
-
-    /** Days done this week including today, for weekly habits. */
-    val weekDone get() = progress.doneDaysEarlierThisWeek + if (progress.doneToday > 0) 1 else 0
-
-    /** Nothing more to do for this habit today, so its reminders stay quiet. */
-    val finishedForToday: Boolean
-        get() = when (habit.schedule) {
-            ScheduleType.DAILY -> done >= habit.target
-            ScheduleType.WEEKLY -> done > 0 || progress.doneDaysEarlierThisWeek >= weeklyTarget
-        }
+data class QuestItem(val quest: QuestEntity, val done: Int) {
+    val cleared get() = done >= quest.target
 }
 
 data class TodaySnapshot(
     val date: LocalDate,
-    val items: List<HabitItem>,
+    /** Every quest in the player's list, picked today or not. */
+    val library: List<QuestEntity>,
+    /** Today's quests: the confirmed plan, or the last plan carried over. */
+    val items: List<QuestItem>,
+    /** False until the player has chosen (or accepted) today's quests. */
+    val planConfirmed: Boolean,
     val eval: DayEval,
     val records: List<DayRecord>,
-    /** Streak including today when today is already won. */
-    val streak: Int,
-    val best: Int,
-    val lifetimeWins: Int,
+    /** Streak of finished days; this is what the XP bonus is based on. */
+    val finishedStreak: Int,
     val earnBack: EarnBack?,
     val restTokensLeft: Int,
-    val weekScore: Int,
+    val totalXp: Int,
     val comeback: Boolean,
 ) {
-    val hasHabits get() = items.isNotEmpty()
-    val comebackBonus get() = if (comeback && items.any { it.done > 0 }) Rules.COMEBACK_BONUS else 0
+    val level: LevelState get() = Rules.level(totalXp)
+
+    /** Streak including today once today is won. */
+    val streak get() = finishedStreak + if (eval.won) 1 else 0
+    val bonusPercent get() = Rules.streakBonusPercent(finishedStreak)
+    val open get() = items.filter { !it.cleared }
 }
 
-data class LogOutcome(val before: TodaySnapshot, val after: TodaySnapshot) {
-    val dayJustWon get() = !before.eval.won && after.eval.won
-    val dayJustGold get() = !before.eval.gold && after.eval.gold
-    val milestone get() = dayJustWon && Rules.milestoneReached(after.streak)
+data class LogOutcome(val quest: QuestItem, val before: TodaySnapshot, val after: TodaySnapshot, val bonusXp: Int) {
+    val xpGained get() = after.totalXp - before.totalXp
+    val leveledUp get() = after.level.level > before.level.level
+    val fullClear get() = !before.eval.gold && after.eval.gold
 }
 
 class Repo(private val db: AppDb) {
-    private val habits = db.habits()
+    private val quests = db.quests()
     private val logs = db.logs()
+    private val plans = db.plans()
+    private val xpEvents = db.xpEvents()
     private val dayRecords = db.dayRecords()
+    private val writes = Mutex()
 
-    fun observeToday(date: LocalDate): Flow<TodaySnapshot> = combine(
-        habits.observeActive(),
-        logs.observeFrom(Rules.weekStart(date).toString()),
-        dayRecords.observeAll(),
-    ) { h, l, r -> buildSnapshot(date, h, l, r.toDomain().filter { it.date.isBefore(date) }) }
-
-    suspend fun snapshot(date: LocalDate): TodaySnapshot = buildSnapshot(
-        date,
-        habits.active(),
-        logs.between(Rules.weekStart(date).toString(), date.toString()),
-        dayRecords.all().toDomain().filter { it.date.isBefore(date) },
-    )
-
-    suspend fun habit(id: String): HabitEntity? = habits.byId(id)
-
-    suspend fun saveHabit(habit: HabitEntity) = habits.upsert(habit)
-
-    suspend fun archiveHabit(id: String) = habits.archive(id)
-
-    suspend fun activeHabits(): List<HabitEntity> = habits.active()
-
-    suspend fun log(habitId: String, source: String, date: LocalDate = LocalDate.now()): LogOutcome {
-        val before = snapshot(date)
-        logs.insert(LogEntity(habitId = habitId, date = date.toString(), loggedAt = System.currentTimeMillis(), source = source))
-        return LogOutcome(before, snapshot(date))
+    fun observeToday(date: LocalDate): Flow<TodaySnapshot> {
+        val day = date.toString()
+        val plan = combine(plans.observe(day), plans.observeLatestBefore(day)) { today, previous -> today to previous }
+        val xp = combine(logs.observeTotalXp(), xpEvents.observeTotalXp()) { a, b -> a + b }
+        return combine(quests.observeActive(), logs.observeOn(day), plan, dayRecords.observeAll(), xp) { q, l, p, r, total ->
+            build(date, q, l, p.first, p.second, r.toDomain().filter { it.date.isBefore(date) }, total)
+        }
     }
 
-    suspend fun undoLast(habitId: String, date: LocalDate = LocalDate.now()) =
-        logs.deleteLast(habitId, date.toString())
+    suspend fun snapshot(date: LocalDate = LocalDate.now()): TodaySnapshot {
+        val day = date.toString()
+        return build(
+            date, quests.active(), logs.on(day), plans.byDate(day), plans.latestBefore(day),
+            dayRecords.all().toDomain().filter { it.date.isBefore(date) }, logs.totalXp() + xpEvents.totalXp(),
+        )
+    }
+
+    suspend fun quest(id: String): QuestEntity? = quests.byId(id)
+
+    suspend fun saveQuest(quest: QuestEntity) = quests.upsert(quest)
+
+    suspend fun archiveQuest(id: String) = quests.archive(id)
+
+    /** A first list to pick from, so the first morning is not an empty screen. */
+    suspend fun seedStarterQuests() {
+        if (quests.all().isNotEmpty()) return
+        listOf(
+            starter("Water", "After each meal", "glasses", 8, 40, "09:00,11:00,13:30,16:00,18:30,21:00"),
+            starter("Read", "In bed, before the phone", "10 pages", 1, 40, "22:00"),
+            starter("Walk", "After work", "20 minutes", 1, 40, "18:00"),
+            starter("Exercise", "Before breakfast", "session", 1, 60, "07:45"),
+            starter("Cook dinner", "When you get home", "meal", 1, 40, "19:00"),
+        ).forEachIndexed { i, q -> quests.upsert(q.copy(sortOrder = i)) }
+    }
+
+    suspend fun confirmPlan(questIds: Collection<String>, date: LocalDate = LocalDate.now()) =
+        plans.upsert(PlanEntity(date.toString(), questIds.joinToString(","), confirmed = true))
+
+    /** Accepts yesterday's quests for today. Returns false when there is nothing to carry over. */
+    suspend fun acceptCarriedPlan(date: LocalDate = LocalDate.now()): Boolean {
+        val ids = snapshot(date).items.map { it.quest.id }
+        if (ids.size < Rules.MIN_QUESTS) return false
+        confirmPlan(ids, date)
+        return true
+    }
+
+    /** Ticks a quest once. Returns null when it is not one of today's quests or is already cleared. */
+    suspend fun log(questId: String, source: String, date: LocalDate = LocalDate.now()): LogOutcome? = writes.withLock {
+        val day = date.toString()
+        val before = snapshot(date)
+        val item = before.items.firstOrNull { it.quest.id == questId } ?: return null
+        if (item.cleared) return null
+        val xp = Rules.unitXp(item.quest.xp, item.quest.target, item.done + 1, before.finishedStreak)
+        logs.insert(LogEntity(questId = questId, date = day, loggedAt = System.currentTimeMillis(), source = source, xp = xp))
+
+        var bonus = 0
+        if (before.comeback && before.items.all { it.done == 0 }) {
+            xpEvents.insertIfAbsent(XpEventEntity(day, KIND_COMEBACK, Rules.COMEBACK_XP))
+            bonus += Rules.COMEBACK_XP
+        }
+        if (!before.eval.gold && snapshot(date).eval.gold) {
+            val clear = Rules.scaled(Rules.CLEAR_BONUS_XP, before.finishedStreak)
+            xpEvents.insertIfAbsent(XpEventEntity(day, KIND_CLEAR, clear))
+            bonus += clear
+        }
+        val after = snapshot(date)
+        LogOutcome(after.items.first { it.quest.id == questId }, before, after, bonus)
+    }
+
+    /** Takes back the last tick of a quest, and any bonus that tick had unlocked. */
+    suspend fun undoLast(questId: String, date: LocalDate = LocalDate.now()) = writes.withLock {
+        val day = date.toString()
+        logs.deleteLast(questId, day)
+        val after = snapshot(date)
+        if (!after.eval.gold) xpEvents.delete(day, KIND_CLEAR)
+        if (after.items.all { it.done == 0 }) xpEvents.delete(day, KIND_COMEBACK)
+    }
 
     /**
-     * Writes a record for every finished day that does not have one yet, oldest first,
-     * so streaks stay fixed even if habits are edited later.
+     * Writes a record for every finished day that does not have one yet, oldest first.
+     * It also freezes each day's plan, so later edits never rewrite history.
      */
-    suspend fun rollover(today: LocalDate = LocalDate.now()) {
-        val allHabits = habits.all()
-        val firstStart = allHabits.minOfOrNull { LocalDate.parse(it.startDate) } ?: return
+    suspend fun rollover(today: LocalDate = LocalDate.now()) = writes.withLock {
+        val first = plans.earliestDate()?.let { LocalDate.parse(it) } ?: return@withLock
         val records = dayRecords.all().toDomain().toMutableList()
-        var day = records.lastOrNull()?.date?.plusDays(1) ?: firstStart
-        if (!day.isBefore(today)) return
-        val allLogs = logs.between(Rules.weekStart(day).toString(), today.toString())
+        var day = records.lastOrNull()?.date?.plusDays(1) ?: first
+        val allQuests = quests.all().associateBy { it.id }
         while (day.isBefore(today)) {
-            // Habits archived since still count for the days they were logged on.
-            val relevant = allHabits.filter { h -> !h.archived || allLogs.any { it.habitId == h.id && it.date == day.toString() } }
-            val items = items(day, relevant, allLogs)
-            val eval = Rules.evaluateDay(day, items.map { it.progress })
-            val bonus = if (Rules.isComeback(records) && items.any { it.done > 0 }) Rules.COMEBACK_BONUS else 0
-            val record = DayRecord(day, Rules.finalizeStatus(eval, day, records), eval.score + bonus)
-            dayRecords.upsert(DayRecordEntity(record.date.toString(), record.status, record.score))
+            val key = day.toString()
+            val plan = plans.byDate(key) ?: plans.latestBefore(key)?.copy(date = key, confirmed = false)?.also { plans.upsert(it) }
+            val dayLogs = logs.on(key)
+            // A quest deleted since then only counts for days it was actually ticked on.
+            val progress = plan?.ids().orEmpty().mapNotNull { allQuests[it] }
+                .filter { q -> !q.archived || dayLogs.any { it.questId == q.id } }
+                .map { q -> QuestProgress(q.target, dayLogs.count { it.questId == q.id }) }
+            val eval = Rules.evaluate(progress)
+            val record = DayRecord(day, Rules.finalizeStatus(eval, day, records))
+            dayRecords.upsert(DayRecordEntity(key, record.status, eval.cleared, eval.total))
             records += record
             day = day.plusDays(1)
         }
     }
 
-    private fun items(date: LocalDate, habits: List<HabitEntity>, logs: List<LogEntity>): List<HabitItem> {
-        val weekStart = Rules.weekStart(date).toString()
-        val day = date.toString()
-        return habits.map { h ->
-            val mine = logs.filter { it.habitId == h.id }
-            val progress = HabitProgress(
-                rule = h.rule(),
-                doneToday = mine.count { it.date == day },
-                doneDaysEarlierThisWeek = mine.filter { it.date >= weekStart && it.date < day }.map { it.date }.distinct().size,
-            )
-            HabitItem(h, progress, Rules.isDue(progress, date), Rules.weeklyTarget(progress.rule, date))
-        }
-    }
-
-    private fun buildSnapshot(date: LocalDate, habits: List<HabitEntity>, logs: List<LogEntity>, records: List<DayRecord>): TodaySnapshot {
-        val items = items(date, habits, logs)
-        val eval = Rules.evaluateDay(date, items.map { it.progress })
+    private fun build(
+        date: LocalDate, library: List<QuestEntity>, logs: List<LogEntity>,
+        plan: PlanEntity?, previous: PlanEntity?, records: List<DayRecord>, totalXp: Int,
+    ): TodaySnapshot {
+        val ids = (plan ?: previous)?.ids().orEmpty().toSet()
+        val items = library.filter { it.id in ids }.map { q -> QuestItem(q, logs.count { it.questId == q.id }) }
         val state = Rules.streak(records)
-        val comeback = Rules.isComeback(records)
-        val counted = items.isNotEmpty() && eval.won
-        val bonus = if (comeback && items.any { it.done > 0 }) Rules.COMEBACK_BONUS else 0
         return TodaySnapshot(
             date = date,
+            library = library,
             items = items,
-            eval = eval,
+            planConfirmed = plan?.confirmed == true,
+            eval = Rules.evaluate(items.map { QuestProgress(it.quest.target, it.done) }),
             records = records,
-            streak = state.current + if (counted) 1 else 0,
-            best = state.best,
-            lifetimeWins = state.lifetimeWins + if (counted) 1 else 0,
+            finishedStreak = state.current,
             earnBack = state.earnBack?.takeIf { !date.isAfter(it.deadline) },
             restTokensLeft = Rules.restTokensLeft(date, records),
-            weekScore = Rules.weekScore(date, records, if (items.isEmpty()) 0 else eval.score + bonus),
-            comeback = comeback,
+            totalXp = totalXp,
+            comeback = Rules.isComeback(records),
         )
     }
 
-    private fun List<DayRecordEntity>.toDomain() = map { DayRecord(LocalDate.parse(it.date), it.status, it.score) }
+    private fun starter(name: String, cue: String, unit: String, target: Int, xp: Int, times: String) = QuestEntity(
+        id = UUID.randomUUID().toString(), name = name, cue = cue, unit = unit, target = target, xp = xp,
+        reminderTimes = times, ringing = false, sortOrder = 0,
+    )
+
+    private fun List<DayRecordEntity>.toDomain() = map { DayRecord(LocalDate.parse(it.date), it.status) }
+
+    private companion object {
+        const val KIND_CLEAR = "clear"
+        const val KIND_COMEBACK = "comeback"
+    }
 }

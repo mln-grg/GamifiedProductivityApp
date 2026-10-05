@@ -24,7 +24,11 @@ class AlarmScheduler(private val context: Context, private val db: AppDb, privat
     fun canScheduleExact(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarms.canScheduleExactAlarms()
 
-    /** Cancels every repeating alarm the app owns and registers the next occurrence of each. */
+    /**
+     * Cancels every repeating alarm the app owns and registers the next occurrence of each.
+     * Every quest in the list gets its alarms; whether it is one of today's quests is
+     * checked when the alarm fires, so a changed plan never leaves stale or missing alarms.
+     */
     suspend fun rescheduleAll() = mutex.withLock {
         val now = System.currentTimeMillis()
         prefs.alarmKeys.forEach { alarms.cancel(pending(it, Intent(context, AlarmReceiver::class.java))) }
@@ -32,40 +36,42 @@ class AlarmScheduler(private val context: Context, private val db: AppDb, privat
         db.alarmEvents().deleteOlderThan(now - KEEP_EVENTS_MS)
 
         val keys = mutableSetOf<String>()
-        for (habit in db.habits().active()) {
-            habit.times().forEachIndexed { slot, time ->
+        for (quest in db.quests().active()) {
+            quest.times().forEachIndexed { slot, time ->
                 val at = nextOccurrence(time, now)
-                val key = "habit/${habit.id}/$slot"
-                set(key, at, habit.ringing, intent(KIND_HABIT) {
-                    putExtra(EXTRA_HABIT_ID, habit.id)
+                val key = "quest/${quest.id}/$slot"
+                set(key, at, quest.ringing, intent(KIND_QUEST) {
+                    putExtra(EXTRA_QUEST_ID, quest.id)
                     putExtra(EXTRA_SLOT, slot)
                     putExtra(EXTRA_SCHEDULED_AT, at)
                 })
-                db.alarmEvents().insert(AlarmEventEntity(habitId = habit.id, slot = slot, scheduledAt = at))
+                db.alarmEvents().insert(AlarmEventEntity(questId = quest.id, slot = slot, scheduledAt = at))
                 keys += key
             }
         }
+        // The morning call is a real wake-up alarm, so it uses the alarm-clock slot.
+        set(KEY_MORNING, nextOccurrence(LocalTime.parse(prefs.morningTime), now), true, intent(KIND_MORNING))
         set(KEY_SAVER, nextOccurrence(SAVER_TIME, now), false, intent(KIND_SAVER))
         set(KEY_ROLLOVER, nextOccurrence(ROLLOVER_TIME, now), false, intent(KIND_ROLLOVER))
-        prefs.alarmKeys = keys + KEY_SAVER + KEY_ROLLOVER
+        prefs.alarmKeys = keys + KEY_MORNING + KEY_SAVER + KEY_ROLLOVER
     }
 
     /** One more ring for a reminder that got no response. */
-    fun scheduleRering(habitId: String, doneAtRing: Int, ringing: Boolean) =
-        oneShot(reringKey(habitId), RERING_DELAY_MS, ringing, KIND_RERING, habitId, doneAtRing)
+    fun scheduleRering(questId: String, doneAtRing: Int, ringing: Boolean) =
+        oneShot(reringKey(questId), RERING_DELAY_MS, ringing, KIND_RERING, questId, doneAtRing)
 
-    fun scheduleSnooze(habitId: String, ringing: Boolean) =
-        oneShot(reringKey(habitId), SNOOZE_DELAY_MS, ringing, KIND_SNOOZE, habitId, 0)
+    fun scheduleSnooze(questId: String, ringing: Boolean) =
+        oneShot(reringKey(questId), SNOOZE_DELAY_MS, ringing, KIND_SNOOZE, questId, 0)
 
-    fun cancelRering(habitId: String) =
-        alarms.cancel(pending(reringKey(habitId), Intent(context, AlarmReceiver::class.java)))
+    fun cancelRering(questId: String) =
+        alarms.cancel(pending(reringKey(questId), Intent(context, AlarmReceiver::class.java)))
 
     fun scheduleTest(delayMs: Long) =
         set("test", System.currentTimeMillis() + delayMs, false, intent(KIND_TEST))
 
-    private fun oneShot(key: String, delayMs: Long, ringing: Boolean, kind: String, habitId: String, doneAtRing: Int) =
+    private fun oneShot(key: String, delayMs: Long, ringing: Boolean, kind: String, questId: String, doneAtRing: Int) =
         set(key, System.currentTimeMillis() + delayMs, ringing, intent(kind) {
-            putExtra(EXTRA_HABIT_ID, habitId)
+            putExtra(EXTRA_QUEST_ID, questId)
             putExtra(EXTRA_DONE_AT_RING, doneAtRing)
         })
 
@@ -93,7 +99,7 @@ class AlarmScheduler(private val context: Context, private val db: AppDb, privat
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun reringKey(habitId: String) = "rering/$habitId"
+    private fun reringKey(questId: String) = "rering/$questId"
 
     private fun nextOccurrence(time: LocalTime, now: Long): Long {
         val zone = ZoneId.systemDefault()
@@ -104,18 +110,20 @@ class AlarmScheduler(private val context: Context, private val db: AppDb, privat
 
     companion object {
         const val EXTRA_KIND = "kind"
-        const val EXTRA_HABIT_ID = "habitId"
+        const val EXTRA_QUEST_ID = "questId"
         const val EXTRA_SLOT = "slot"
         const val EXTRA_SCHEDULED_AT = "scheduledAt"
         const val EXTRA_DONE_AT_RING = "doneAtRing"
 
-        const val KIND_HABIT = "habit"
+        const val KIND_QUEST = "quest"
         const val KIND_RERING = "rering"
         const val KIND_SNOOZE = "snooze"
+        const val KIND_MORNING = "morning"
         const val KIND_SAVER = "saver"
         const val KIND_ROLLOVER = "rollover"
         const val KIND_TEST = "test"
 
+        private const val KEY_MORNING = "morning"
         private const val KEY_SAVER = "saver"
         private const val KEY_ROLLOVER = "rollover"
         private val SAVER_TIME: LocalTime = LocalTime.of(21, 0)
